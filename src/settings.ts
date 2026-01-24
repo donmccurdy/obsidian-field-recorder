@@ -1,15 +1,15 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
 import FieldRecorderPlugin from "./main";
 
-export interface MyPluginSettings {
-	mySetting: string;
+export interface FieldRecorderPluginSettings {
+	bitrate: number;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+export const DEFAULT_SETTINGS: FieldRecorderPluginSettings = {
+	bitrate: 192
 }
 
-export class SampleSettingTab extends PluginSettingTab {
+export class FieldRecorderSettingTab extends PluginSettingTab {
 	plugin: FieldRecorderPlugin;
 
 	constructor(app: App, plugin: FieldRecorderPlugin) {
@@ -23,14 +23,21 @@ export class SampleSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+		    .setName('Audio recording quality')
+		    .addDropdown((dropdown) =>
+		       dropdown
+		          .addOption('32', '32 kb/s')   // lowest
+		          .addOption('96', '96 kb/s')   // low
+		          .addOption('128', '128 kb/s') // medium-low
+		          .addOption('160', '160 kb/s') // medium
+		          .addOption('192', '192 kb/s') // medium-high
+		          .addOption('256', '256 kb/s') // high
+		          .addOption('320', '320 kb/s') // highest
+		          .setValue(String(this.plugin.settings.bitrate))
+		          .onChange(async (value) => {
+		             this.plugin.settings.bitrate = Number(value);
+		             await this.plugin.saveSettings();
+		          })
+		    );
 	}
 }
