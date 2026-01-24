@@ -1,26 +1,62 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
+import {App, Editor, MarkdownView, Modal, Plugin, setIcon} from 'obsidian';
 import {DEFAULT_SETTINGS, FieldRecorderPluginSettings, FieldRecorderSettingTab as FieldRecorderSettingTab} from "./settings";
 
-// Remember to rename these classes and interfaces!
+type RecordingState = {
+	stream: MediaStream,
+	recorder: MediaRecorder,
+}
 
 export default class FieldRecorderPlugin extends Plugin {
 	settings: FieldRecorderPluginSettings;
+	recordingState: RecordingState | null = null;
+
+	ribbonIconEl: HTMLElement | null = null;
+	statusBarItemEl: HTMLElement | null = null;
 
 	async onload() {
 		await this.loadSettings();
 
-		this.addRibbonIcon('dice', 'Greet', () => {
-			new Notice('Hello, world!!!');
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
+		this.ribbonIconEl = this.addRibbonIcon('mic', 'Field Recorder: Start/stop recording audio', async (o) => {
+			if (this.recordingState) {
+				this.stopRecording();
+				this.stopMicrophone();
+			} else {
+				await this.startMicrophone();
+				this.startRecording();
+			}
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		this.addCommand({
+			id: 'start-recording-audio',
+			name: 'Start recording audio',
+			checkCallback: (checking) => {
+				if (checking) return !this.recordingState;
+				this.startMicrophone()
+					.then(() => this.startRecording())
+					.catch((e) => {
+						console.error('Failed to start recording', e);
+					});
+				return true;
+			}
+		});
+
+
+		this.addCommand({
+			id: 'stop-recording-audio',
+			name: 'Stop recording audio',
+			checkCallback: (checking) => {
+				if (checking) return !!this.recordingState;
+				this.stopRecording();
+				this.stopMicrophone();
+				return true;
+			}
+		});
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
+			id: 'open-modal',
+			name: 'Open modal',
 			callback: () => {
 				new FieldRecorderModal(this.app).open();
 			}
@@ -56,21 +92,14 @@ export default class FieldRecorderPlugin extends Plugin {
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new FieldRecorderSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
 	}
 
 	onunload() {
+		if (this.recordingState) {
+			this.stopRecording();
+			this.stopMicrophone();
+		}
 	}
 
 	async loadSettings() {
@@ -79,6 +108,51 @@ export default class FieldRecorderPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	async startMicrophone() {
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		const recorder = new MediaRecorder(stream);
+		this.recordingState = {stream, recorder};
+	}
+
+	stopMicrophone() {
+		this.recordingState!.stream.getTracks().forEach((track) => track.stop());
+		this.recordingState = null;
+	}
+
+	startRecording() {
+		this.recordingState!.recorder.start();
+		this.recordingState!.recorder.addEventListener("dataavailable", async (event) => {
+			console.log('dataavailable', event.data);
+		    // // Write chunks to the file.
+		    // await writable.write(event.data);
+		    // if (recorder.state === "inactive") {
+		    //   // Close the file when the recording stops.
+		    //   await writable.close();
+		    // }
+		  });
+
+		this.showRecordingIndicator();
+	}
+
+	stopRecording() {
+		this.recordingState!.recorder.stop();
+		this.hideRecordingIndicator();
+	}
+
+	showRecordingIndicator() {
+		this.statusBarItemEl = this.addStatusBarItem();
+		const iconEl = this.statusBarItemEl.createEl('span');
+		iconEl.classList.add('status-bar-item-icon', 'field-recorder-status-bar-icon');
+		setIcon(iconEl, 'mic');
+		this.ribbonIconEl!.classList.add('is-active');
+	}
+
+	hideRecordingIndicator() {
+		this.statusBarItemEl!.remove();
+		this.statusBarItemEl = null;
+		this.ribbonIconEl!.classList.remove('is-active');
 	}
 }
 
