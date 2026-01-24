@@ -8,5 +8,5 @@ If your plugin does not need CSS, delete this file.
 */
 
 .field-recorder-status-bar-icon {
-	color: crimson;
+	color: var(--text-error);
 }

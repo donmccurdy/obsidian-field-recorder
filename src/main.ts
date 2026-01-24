@@ -1,9 +1,11 @@
-import {App, Editor, MarkdownView, Modal, Plugin, setIcon} from 'obsidian';
+import {Plugin, setIcon} from 'obsidian';
 import {DEFAULT_SETTINGS, FieldRecorderPluginSettings, FieldRecorderSettingTab as FieldRecorderSettingTab} from "./settings";
+import { concat, getFileExtension, getTimestamp } from 'utils';
 
 type RecordingState = {
 	stream: MediaStream,
 	recorder: MediaRecorder,
+	chunks: Promise<ArrayBuffer>[],
 }
 
 export default class FieldRecorderPlugin extends Plugin {
@@ -34,13 +36,10 @@ export default class FieldRecorderPlugin extends Plugin {
 				if (checking) return !this.recordingState;
 				this.startMicrophone()
 					.then(() => this.startRecording())
-					.catch((e) => {
-						console.error('Failed to start recording', e);
-					});
+					.catch((e) => this.onError(e));
 				return true;
 			}
 		});
-
 
 		this.addCommand({
 			id: 'stop-recording-audio',
@@ -50,45 +49,6 @@ export default class FieldRecorderPlugin extends Plugin {
 				this.stopRecording();
 				this.stopMicrophone();
 				return true;
-			}
-		});
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal',
-			name: 'Open modal',
-			callback: () => {
-				new FieldRecorderModal(this.app).open();
-			}
-		});
-
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new FieldRecorderModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
 			}
 		});
 
@@ -112,8 +72,12 @@ export default class FieldRecorderPlugin extends Plugin {
 
 	async startMicrophone() {
 		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		const recorder = new MediaRecorder(stream);
-		this.recordingState = {stream, recorder};
+		const recorder = new MediaRecorder(stream, {
+			audioBitrateMode: this.settings.bitrateMode,
+			audioBitsPerSecond: this.settings.bitrate,
+			mimeType: this.settings.mimeType,
+		});
+		this.recordingState = {stream, recorder, chunks: []};
 	}
 
 	stopMicrophone() {
@@ -122,23 +86,39 @@ export default class FieldRecorderPlugin extends Plugin {
 	}
 
 	startRecording() {
-		this.recordingState!.recorder.start();
-		this.recordingState!.recorder.addEventListener("dataavailable", async (event) => {
-			console.log('dataavailable', event.data);
-		    // // Write chunks to the file.
-		    // await writable.write(event.data);
-		    // if (recorder.state === "inactive") {
-		    //   // Close the file when the recording stops.
-		    //   await writable.close();
-		    // }
+		const {recorder, chunks} = this.recordingState!;
+		recorder.start();
+		recorder.addEventListener("dataavailable", (event) => {
+			chunks.push(event.data.arrayBuffer());
+			if (recorder.state === 'inactive') {
+				this.saveRecording(chunks, recorder).catch((e) => this.onError(e));
+			}
 		  });
-
 		this.showRecordingIndicator();
 	}
 
 	stopRecording() {
 		this.recordingState!.recorder.stop();
 		this.hideRecordingIndicator();
+	}
+
+	async saveRecording(chunks: Promise<ArrayBuffer>[], recorder: MediaRecorder) {
+		const {mimeType, audioBitsPerSecond, audioBitrateMode} = recorder;
+		const data = concat(await Promise.all(chunks));
+		const filename = `Recording ${getTimestamp()}.${getFileExtension(mimeType)}`;
+		const path = await this.app.fileManager.getAvailablePathForAttachment(filename);
+		const file = await this.app.vault.createBinary(path, data);
+
+		const activeEditor = this.app.workspace.activeEditor;
+		const activePath = this.app.workspace.getActiveFile()?.path;
+		if (activeEditor && activePath) {
+			const markdownLink = this.app.fileManager.generateMarkdownLink(file, activePath);
+			activeEditor.editor?.replaceSelection(`!${markdownLink}`);
+		} else {
+			await this.app.workspace.getLeaf(true).openFile(file);
+		}
+
+		console.debug(`Created file: ${path} (${mimeType}, ${audioBitsPerSecond / 1000} kb/s, ${audioBitrateMode})`);
 	}
 
 	showRecordingIndicator() {
@@ -154,20 +134,8 @@ export default class FieldRecorderPlugin extends Plugin {
 		this.statusBarItemEl = null;
 		this.ribbonIconEl!.classList.remove('is-active');
 	}
-}
 
-class FieldRecorderModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	onError(e: unknown) {
+		console.error(e);
 	}
 }
