@@ -1,0 +1,117 @@
+/******************************************************************************
+ * LAYOUT
+ */
+
+.fieldrec-view {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.fieldrec-section {
+	padding: var(--size-4-4);
+}
+
+.fieldrec-section.-record {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.fieldrec-section.-settings {
+	overflow: auto;
+	padding-bottom: var(--size-4-8);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/******************************************************************************
+ * STATUS BAR
+ */
+
+.status-bar-item.plugin-field-recorder {
+	background: var(--color-accent);
+	justify-content: center;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+.status-bar-item.plugin-field-recorder > .status-bar-item-icon {
+	color: var(--text-on-accent);
+}
+
+/******************************************************************************
+ * RECORDER
+ */
+
+.fieldrec-section.-record > :not(:first-child) {
+	margin: var(--size-4-2) 0;
+}
+
+.fieldrec-section.-record canvas {
+	width: 100%;
+	height: 150px;
+	image-rendering: pixelated;
+	border: var(--input-border-width) solid var(--background-modifier-border);
+	border-radius: calc(min(var(--input-radius), var(--input-height) / 2));
+}
+
+/******************************************************************************
+ * SETTINGS
+ */
+
+.fieldrec-section .setting-item.is-disabled {
+	opacity: 0.5;
+}
+
+/** Prevent long select inputs from overflowing layout. */
+.fieldrec-setting-item.-wide {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.fieldrec-setting-item.-wide .setting-item-control,
+.fieldrec-setting-item.-wide .setting-item-control > select {
+	width: 100%;
+}
+
+/******************************************************************************
+ * BUTTONS
+ */
+
+.fieldrec-btn-row {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+}
+
+.fieldrec-btn-icon > svg {
+	stroke: #ffffff;
+}
+
+.fieldrec-btn-icon + .fieldrec-btn-icon {
+	margin-left: var(--size-4-2);
+}
+
+.fieldrec-btn-icon.-record {
+	background: var(--interactive-accent);
+}
+
+.fieldrec-btn-icon.-pause {
+	background-color: #e0ac00;
+}
+
+.fieldrec-btn-icon.-stop {
+	background: var(--color-red);
+}
+
+.fieldrec-btn-icon:hover {
+	opacity: 0.85;
+}
+
+.fieldrec-btn-icon:disabled {
+	background: var(--interactive-normal);
+	color: var(--text-faint);
+	opacity: 0.5;
+}
