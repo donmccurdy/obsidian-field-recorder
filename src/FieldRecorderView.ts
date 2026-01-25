@@ -18,7 +18,6 @@ type FieldRecorderViewProps = {
 export class FieldRecorderView extends ItemView {
 	private plugin: FieldRecorderPlugin;
 	private model: FieldRecorderModel;
-	private subscriptions: (() => void)[] = [];
 	private formSubscriptions: (() => void)[] = [];
 
 	constructor(leaf: WorkspaceLeaf, props: FieldRecorderViewProps) {
@@ -40,15 +39,8 @@ export class FieldRecorderView extends ItemView {
 	}
 
 	onload() {
-		this.subscriptions.push(
-			this.model.inputDevices.subscribe(() => void this.onOpen()),
-			this.model.supportedConstraints.subscribe(() => void this.onOpen()),
-		);
-	}
-
-	onunload() {
-		this.subscriptions.forEach((unsub) => void unsub());
-		this.subscriptions.length = 0;
+		this.register(this.model.inputDevices.subscribe(() => void this.onOpen()));
+		this.register(this.model.supportedConstraints.subscribe(() => void this.onOpen()));
 	}
 
 	protected async onOpen(): Promise<void> {

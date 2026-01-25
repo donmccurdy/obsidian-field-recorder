@@ -15,8 +15,6 @@ export class FieldRecorderPlugin extends Plugin {
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
 
-	subscriptions: (() => void)[] = [];
-
 	async onload() {
 		await this.loadSettings();
 
@@ -34,7 +32,7 @@ export class FieldRecorderPlugin extends Plugin {
 			(leaf: WorkspaceLeaf) => new FieldRecorderView(leaf, { plugin: this, model: this.model }),
 		);
 
-		this.subscriptions.push(
+		this.register(
 			effect(() => {
 				if (this.model.state.value === "recording") {
 					this._showRecordingIndicator();
@@ -47,8 +45,6 @@ export class FieldRecorderPlugin extends Plugin {
 
 	onunload() {
 		this.model.onunload();
-		this.subscriptions.forEach((unsub) => void unsub());
-		this.subscriptions.length = 0;
 	}
 
 	private _registerCommands() {
