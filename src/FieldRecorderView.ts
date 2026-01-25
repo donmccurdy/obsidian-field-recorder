@@ -134,7 +134,8 @@ export class FieldRecorderView extends ItemView {
 		const settingsSectionEl = containerEl.createEl("section", {
 			cls: ["fieldrec-section", "fieldrec-section-settings"],
 		});
-		settingsSectionEl.createEl("h5", { text: "Audio settings" });
+
+		new Setting(settingsSectionEl).setName("Audio settings").setHeading();
 
 		const supportedConstraints = this.model.supportedConstraints.peek();
 		const inputDevices = this.model.inputDevices.peek();
