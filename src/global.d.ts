@@ -1,7 +1,7 @@
 interface MediaRecorder {
-	audioBitrateMode: 'variable' | 'constant'
+	audioBitrateMode: "variable" | "constant";
 }
 
 interface MediaRecorderOptions {
-	audioBitrateMode: 'variable' | 'constant'
+	audioBitrateMode: "variable" | "constant";
 }
