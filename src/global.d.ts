@@ -15,3 +15,7 @@ interface MediaTrackConstraints {
 interface MediaTrackSupportedConstraints {
 	voiceIsolation?: boolean;
 }
+
+interface AudioContextOptions {
+	sinkId?: string | { type: "none" };
+}

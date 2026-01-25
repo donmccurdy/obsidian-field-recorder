@@ -7,6 +7,11 @@ export class FieldRecorderModel {
 	app: App;
 	state: Signal<"off" | "idle" | "paused" | "recording"> = signal("off");
 	settings: FieldRecorderPluginSettings;
+	audioCtx: AudioContext | null = null;
+	sourceNode: MediaStreamAudioSourceNode | null = null;
+	gainNode: GainNode | null;
+	analyzerNode: AnalyserNode | null;
+	destinationNode: MediaStreamAudioDestinationNode | null = null;
 	stream: MediaStream | null = null;
 	recorder: MediaRecorder | null = null;
 	inputDevices: Signal<MediaDeviceInfo[]> = signal([]);
@@ -41,15 +46,20 @@ export class FieldRecorderModel {
 
 	async updateSettings(settings: FieldRecorderPluginSettings) {
 		this.settings = settings;
-		if (this.state.peek() === "idle") {
+
+		const state = this.state.peek();
+		if (state === "idle") {
 			this.stopMicrophone();
 			await this.startMicrophone();
+		} else if (state !== "off") {
+			this._updateAudioNodes();
 		}
 	}
 
 	async startMicrophone() {
 		const { settings } = this;
 
+		// TODO: sampleRate, sampleSize?
 		this.stream = await navigator.mediaDevices.getUserMedia({
 			audio: {
 				deviceId: settings.inputDeviceId,
@@ -60,7 +70,18 @@ export class FieldRecorderModel {
 			},
 		});
 
-		this.recorder = new MediaRecorder(this.stream, {
+		// TODO: sampleRate?
+		this.audioCtx = new AudioContext({ sinkId: { type: "none" } });
+		this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
+		this.gainNode = this.audioCtx.createGain();
+		this.analyzerNode = this.audioCtx.createAnalyser();
+		this.destinationNode = this.audioCtx.createMediaStreamDestination();
+
+		this.sourceNode.connect(this.gainNode);
+		this.gainNode.connect(this.analyzerNode);
+		this.analyzerNode.connect(this.destinationNode);
+
+		this.recorder = new MediaRecorder(this.destinationNode.stream, {
 			audioBitrateMode: settings.bitrateMode,
 			audioBitsPerSecond: settings.bitrate,
 			mimeType: settings.mimeType,
@@ -72,6 +93,8 @@ export class FieldRecorderModel {
 		// });
 
 		this.state.value = "idle";
+
+		this._updateAudioNodes();
 	}
 
 	stopMicrophone() {
@@ -80,8 +103,12 @@ export class FieldRecorderModel {
 			track.stop();
 		}
 
-		this.stream = null;
 		this.recorder = null;
+		this.stream = null;
+		this.gainNode = null;
+		this.analyzerNode = null;
+		void this.audioCtx?.close();
+		this.audioCtx = null;
 		this.state.value = "off";
 	}
 
@@ -127,6 +154,15 @@ export class FieldRecorderModel {
 			this.stopMicrophone();
 		} else if (state === "idle") {
 			this.stopMicrophone();
+		}
+	}
+
+	private _updateAudioNodes() {
+		const { settings } = this;
+		if (settings.autoGainControl) {
+			this.gainNode!.gain.value = 1.0;
+		} else {
+			this.gainNode!.gain.value = 2 ** settings.gain;
 		}
 	}
 

@@ -1,11 +1,12 @@
 import { SUPPORTED_MIME_TYPES } from "./constants";
 
-// also: contentHint? gain?
+// also: contentHint? sampleRate? sampleSize?
 export interface FieldRecorderPluginSettings {
 	filename: string;
 	bitrate: number;
 	bitrateMode: "variable" | "constant";
 	mimeType: string;
+	gain: number;
 	autoGainControl: boolean;
 	noiseSuppression: boolean;
 	echoCancellation: boolean;
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: FieldRecorderPluginSettings = {
 	mimeType: SUPPORTED_MIME_TYPES.includes("audio/mp4")
 		? "audio/mp4"
 		: (SUPPORTED_MIME_TYPES[0] as string),
+	gain: 0.0,
 	autoGainControl: true,
 	noiseSuppression: false,
 	echoCancellation: false,

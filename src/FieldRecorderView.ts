@@ -202,6 +202,18 @@ export class FieldRecorderView extends ItemView {
 					});
 			});
 
+		new Setting(settingsSectionEl).setName("Gain").addSlider((slider) => {
+			slider
+				.setInstant(true)
+				.setLimits(-5, +5, 0.05)
+				.setDynamicTooltip()
+				.setValue(plugin.settings.gain)
+				.onChange(async (value) => {
+					plugin.settings.gain = value;
+					await plugin.saveSettings();
+				});
+		});
+
 		// TODO: Has no effect if voice isolation is on, and should be disabled.
 		const noiseSuppressionAvailable = supportedConstraints.noiseSuppression === true;
 		new Setting(settingsSectionEl)
