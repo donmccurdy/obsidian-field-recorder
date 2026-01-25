@@ -1,10 +1,8 @@
-import { Plugin, setIcon } from "obsidian";
-import { concat, getFileExtension, getTimestamp } from "utils";
-import {
-	DEFAULT_SETTINGS,
-	type FieldRecorderPluginSettings,
-	FieldRecorderSettingTab,
-} from "./settings";
+import { Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
+import { VIEW_TYPE_FIELD_RECORDER } from "./constants";
+import { FieldRecorderItemView } from "./FieldRecorderItemView";
+import { DEFAULT_SETTINGS, type FieldRecorderPluginSettings } from "./settings";
+import { concat, getDefaultFilename, getFileExtension } from "./utils";
 
 type RecordingState = {
 	stream: MediaStream;
@@ -35,20 +33,17 @@ export default class FieldRecorderPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.ribbonIconEl = this.addRibbonIcon(
-			"mic",
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			"Field Recorder: Start/stop recording audio",
-			async () => {
-				if (this.recordingState) {
-					this.stopRecording();
-					this.stopMicrophone();
-				} else {
-					await this.startMicrophone();
-					this.startRecording();
-				}
+		this.ribbonIconEl = this.addRibbonIcon("mic", "Open field recorder", async () => {
+			await this.app.workspace.ensureSideLeaf(VIEW_TYPE_FIELD_RECORDER, "right");
+		});
+
+		this.addCommand({
+			id: "open",
+			name: "Open",
+			callback: async () => {
+				await this.activateView();
 			},
-		);
+		});
 
 		this.addCommand({
 			id: "start-recording-audio",
@@ -73,7 +68,10 @@ export default class FieldRecorderPlugin extends Plugin {
 			},
 		});
 
-		this.addSettingTab(new FieldRecorderSettingTab(this.app, this));
+		this.registerView(
+			VIEW_TYPE_FIELD_RECORDER,
+			(leaf: WorkspaceLeaf) => new FieldRecorderItemView(leaf, { plugin: this }),
+		);
 	}
 
 	onunload() {
@@ -93,6 +91,20 @@ export default class FieldRecorderPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	async activateView() {
+		const { workspace } = this.app;
+
+		const leaves = workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
+		if (leaves.length > 0) {
+			await workspace.revealLeaf(leaves[0]!);
+			return;
+		}
+
+		const leaf = workspace.getRightLeaf(false)!;
+		await leaf.setViewState({ type: VIEW_TYPE_FIELD_RECORDER, active: true });
+		await workspace.revealLeaf(leaf);
 	}
 
 	async startMicrophone() {
@@ -137,33 +149,38 @@ export default class FieldRecorderPlugin extends Plugin {
 	}
 
 	async saveRecording(chunks: Promise<ArrayBuffer>[], recorder: MediaRecorder) {
-		const data = concat(await Promise.all(chunks));
-		const filename = `Recording ${getTimestamp()}.${getFileExtension(recorder.mimeType)}`;
-		const path = await this.app.fileManager.getAvailablePathForAttachment(filename);
-		const file = await this.app.vault.createBinary(path, data);
+		const { workspace, vault, fileManager } = this.app;
 
-		const activeEditor = this.app.workspace.activeEditor;
-		const activePath = this.app.workspace.getActiveFile()?.path;
+		const basename = this.settings.filename || getDefaultFilename();
+		const filename = `${basename}.${getFileExtension(recorder.mimeType)}`;
+		const path = await fileManager.getAvailablePathForAttachment(filename);
+
+		const data = concat(await Promise.all(chunks));
+		const file = await vault.createBinary(path, data);
+
+		const activeEditor = workspace.activeEditor;
+		const activePath = workspace.getActiveFile()?.path;
 		if (activeEditor && activePath) {
-			const markdownLink = this.app.fileManager.generateMarkdownLink(file, activePath);
+			const markdownLink = fileManager.generateMarkdownLink(file, activePath);
 			activeEditor.editor?.replaceSelection(`!${markdownLink}`);
 		} else {
-			await this.app.workspace.getLeaf(true).openFile(file);
+			await workspace.getLeaf(true).openFile(file);
 		}
 	}
 
 	showRecordingIndicator() {
 		this.statusBarItemEl = this.addStatusBarItem();
 		const iconEl = this.statusBarItemEl.createEl("span");
-		iconEl.classList.add("status-bar-item-icon", "field-recorder-status-bar-icon");
+		iconEl.toggleClass("status-bar-item-icon", true);
+		iconEl.toggleClass("fieldrec-status-bar-icon", true);
 		setIcon(iconEl, "mic");
-		this.ribbonIconEl!.classList.add("is-active");
+		this.ribbonIconEl!.toggleClass("is-active", true);
 	}
 
 	hideRecordingIndicator() {
 		this.statusBarItemEl!.remove();
 		this.statusBarItemEl = null;
-		this.ribbonIconEl!.classList.remove("is-active");
+		this.ribbonIconEl!.toggleClass("is-active", false);
 	}
 
 	onError(e: unknown) {

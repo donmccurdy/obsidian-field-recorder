@@ -1,23 +1,19 @@
-import { SUPPORTED_EXTENSIONS } from "./constants";
+import { MIME_TYPE_TO_EXTENSION, SUPPORTED_MIME_TYPES } from "./constants";
 
 export function getFileExtension(mimeType: string) {
-	const match = mimeType.match(/^audio\/(\w+).*/);
-	if (match && SUPPORTED_EXTENSIONS[match[1]!]) {
-		return SUPPORTED_EXTENSIONS[match[1]!];
+	const match = mimeType.match(/^(audio\/\w+).*/);
+	if (match && SUPPORTED_MIME_TYPES.some((mimeType) => match[1]!.startsWith(mimeType))) {
+		return MIME_TYPE_TO_EXTENSION[match[1]!];
 	}
 	throw new Error(`Unsupported mimeType: "${mimeType}"`);
 }
 
-export function getTimestamp() {
+export function getDefaultFilename() {
 	const date = new Date();
-	let timestamp = "";
-	timestamp += date.getFullYear();
-	timestamp += String(date.getMonth() + 1).padStart(2, "0");
-	timestamp += String(date.getDate()).padStart(2, "0");
-	timestamp += String(date.getHours()).padStart(2, "0");
-	timestamp += String(date.getMinutes()).padStart(2, "0");
-	timestamp += String(date.getSeconds()).padStart(2, "0");
-	return timestamp;
+	const yyyy = date.getFullYear();
+	const mm = String(date.getMonth() + 1).padStart(2, "0");
+	const dd = String(date.getDate()).padStart(2, "0");
+	return `${yyyy}-${mm}-${dd} Recording`;
 }
 
 export function concat(chunks: ArrayBuffer[]) {
