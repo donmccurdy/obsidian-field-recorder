@@ -13,7 +13,7 @@ export default class FieldRecorderPlugin extends Plugin {
 	statusBarItemEl: HTMLElement | null = null;
 
 	subscriptions: (() => void)[] = [];
-
+	3;
 	async onload() {
 		await this.loadSettings();
 

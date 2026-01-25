@@ -101,7 +101,7 @@ export class FieldRecorderView extends ItemView {
 
 		const recordBtnEl = btnRowEl.createEl("button", {
 			title: "Start",
-			cls: "fieldrec-btn-icon",
+			cls: ["fieldrec-btn-icon", "-record"],
 		});
 		setIcon(recordBtnEl, "mic");
 		recordBtnEl.addEventListener("click", () => {
@@ -110,7 +110,7 @@ export class FieldRecorderView extends ItemView {
 
 		const pauseBtnEl = btnRowEl.createEl("button", {
 			title: "Pause",
-			cls: "fieldrec-btn-icon",
+			cls: ["fieldrec-btn-icon", "-pause"],
 			attr: { disabled: "" },
 		});
 		setIcon(pauseBtnEl, "pause");
@@ -120,7 +120,7 @@ export class FieldRecorderView extends ItemView {
 
 		const stopBtnEl = btnRowEl.createEl("button", {
 			title: "Stop",
-			cls: "fieldrec-btn-icon",
+			cls: ["fieldrec-btn-icon", "-stop"],
 			attr: { disabled: "" },
 		});
 		setIcon(stopBtnEl, "square");

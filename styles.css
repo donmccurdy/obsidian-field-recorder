@@ -45,6 +45,22 @@ If your plugin does not need CSS, delete this file.
 	margin-left: var(--size-4-2);
 }
 
+.fieldrec-btn-icon.-record:not(:disabled) {
+	background: var(--interactive-accent);
+}
+
+.fieldrec-btn-icon.-record:not(:disabled):hover {
+	background: var(--interactive-accent-hover);
+}
+
+.fieldrec-btn-icon.-stop:not(:disabled) {
+	background: var(--color-red);
+}
+
+.fieldrec-btn-icon.-stop:not(:disabled):hover {
+	background: rgba(var(--color-red-rgb), 0.8);
+}
+
 .fieldrec-btn-row {
 	width: 100%;
 	display: flex;
