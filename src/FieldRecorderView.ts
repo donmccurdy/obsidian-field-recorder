@@ -8,7 +8,7 @@ import {
 	VIEW_TYPE_FIELD_RECORDER,
 } from "./constants";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
-import type FieldRecorderPlugin from "./main";
+import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
 
 type FieldRecorderViewProps = {
 	plugin: FieldRecorderPlugin;
@@ -262,7 +262,7 @@ export class FieldRecorderView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
-		this.model.stopMicrophone();
+		this.model.stopAll();
 		this.formSubscriptions.forEach((unsub) => void unsub());
 		this.formSubscriptions.length = 0;
 	}

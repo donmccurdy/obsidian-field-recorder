@@ -120,6 +120,16 @@ export class FieldRecorderModel {
 		this.chunks = [];
 	}
 
+	stopAll() {
+		const state = this.state.peek();
+		if (state === "recording" || state === "paused") {
+			this.stopRecording();
+			this.stopMicrophone();
+		} else if (state === "idle") {
+			this.stopMicrophone();
+		}
+	}
+
 	async saveRecording(chunks: Promise<ArrayBuffer>[], recorder: MediaRecorder) {
 		const { workspace, vault, fileManager } = this.app;
 
