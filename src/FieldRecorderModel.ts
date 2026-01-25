@@ -1,6 +1,6 @@
 import { type Signal, signal } from "@preact/signals-core";
 import type { App } from "obsidian";
-import type { FieldRecorderPluginSettings } from "./settings";
+import type { FieldRecorderPluginSettings } from "./constants";
 import { assert, concat, getDefaultFilename, getFileExtension } from "./utils";
 
 export class FieldRecorderModel {

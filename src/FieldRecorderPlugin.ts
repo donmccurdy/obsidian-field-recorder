@@ -1,9 +1,12 @@
 import { FieldRecorderModel } from "FieldRecorderModel";
 import { effect } from "@preact/signals-core";
 import { Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
-import { VIEW_TYPE_FIELD_RECORDER } from "./constants";
+import {
+	DEFAULT_SETTINGS,
+	type FieldRecorderPluginSettings,
+	VIEW_TYPE_FIELD_RECORDER,
+} from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
-import { DEFAULT_SETTINGS, type FieldRecorderPluginSettings } from "./settings";
 
 export class FieldRecorderPlugin extends Plugin {
 	model: FieldRecorderModel;
