@@ -1,3 +1,4 @@
+import { WaveformView } from "WaveformView";
 import { effect } from "@preact/signals-core";
 import { ItemView, Setting, setIcon, type WorkspaceLeaf } from "obsidian";
 import { getDefaultFilename } from "utils";
@@ -18,6 +19,7 @@ type FieldRecorderViewProps = {
 export class FieldRecorderView extends ItemView {
 	private plugin: FieldRecorderPlugin;
 	private model: FieldRecorderModel;
+	private waveformView: WaveformView | null = null;
 	private formSubscriptions: (() => void)[] = [];
 
 	constructor(leaf: WorkspaceLeaf, props: FieldRecorderViewProps) {
@@ -39,8 +41,9 @@ export class FieldRecorderView extends ItemView {
 	}
 
 	onload() {
-		this.register(this.model.inputDevices.subscribe(() => void this.onOpen()));
-		this.register(this.model.supportedConstraints.subscribe(() => void this.onOpen()));
+		// TODO: Need to update UI without a full redraw.
+		// this.register(this.model.inputDevices.subscribe(() => void this.onOpen()));
+		// this.register(this.model.supportedConstraints.subscribe(() => void this.onOpen()));
 	}
 
 	protected async onOpen(): Promise<void> {
@@ -76,14 +79,16 @@ export class FieldRecorderView extends ItemView {
 				height: 100,
 			},
 		});
-		const ctx = canvasEl.getContext("2d")!;
 		const computedStyle = window.getComputedStyle(canvasEl);
-		const accentColor = computedStyle.getPropertyValue("--interactive-accent");
-		const backgroundColor = computedStyle.getPropertyValue("--background-modifier-form-field");
-		ctx.fillStyle = backgroundColor;
-		ctx.fillRect(0, 0, 200, 100);
-		ctx.fillStyle = accentColor;
-		ctx.fillRect(4, 4, 4, 4);
+
+		this.waveformView = this.addChild(
+			new WaveformView({
+				model: this.model,
+				canvasEl,
+				accentColor: computedStyle.getPropertyValue("--interactive-accent"),
+				backgroundColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
+			}),
+		);
 
 		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
 
@@ -262,14 +267,15 @@ export class FieldRecorderView extends ItemView {
 					}),
 			);
 
-		await this.model.startMicrophone();
-		this.plugin.updateViewIndicator();
+		await this.plugin.onViewStateChange();
 	}
 
 	async onClose(): Promise<void> {
-		this.model.stopAll();
 		this.formSubscriptions.forEach((unsub) => void unsub());
 		this.formSubscriptions.length = 0;
-		this.plugin.updateViewIndicator();
+		if (this.waveformView) {
+			this.removeChild(this.waveformView);
+		}
+		await this.plugin.onViewStateChange();
 	}
 }

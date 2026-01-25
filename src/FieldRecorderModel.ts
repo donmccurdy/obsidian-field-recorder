@@ -77,6 +77,8 @@ export class FieldRecorderModel {
 		this.analyzerNode = this.audioCtx.createAnalyser();
 		this.destinationNode = this.audioCtx.createMediaStreamDestination();
 
+		this.analyzerNode.fftSize = 2048;
+
 		this.sourceNode.connect(this.gainNode);
 		this.gainNode.connect(this.analyzerNode);
 		this.analyzerNode.connect(this.destinationNode);
@@ -99,15 +101,16 @@ export class FieldRecorderModel {
 
 	stopMicrophone() {
 		assert(this.state.value === "idle");
-		for (const track of this.stream!.getTracks()) {
-			track.stop();
-		}
+
+		this.stream!.getTracks().forEach((track) => void track.stop());
+		void this.audioCtx?.close();
 
 		this.recorder = null;
 		this.stream = null;
 		this.gainNode = null;
 		this.analyzerNode = null;
-		void this.audioCtx?.close();
+		this.sourceNode = null;
+		this.destinationNode = null;
 		this.audioCtx = null;
 		this.state.value = "off";
 	}

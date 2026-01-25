@@ -120,9 +120,17 @@ export class FieldRecorderPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
 	}
 
-	updateViewIndicator() {
+	async onViewStateChange() {
+		const state = this.model.state.peek();
+
 		const isViewActive = this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
 		this.ribbonIconEl!.toggleClass("is-active", isViewActive);
+
+		if (isViewActive && state === "off") {
+			await this.model.startMicrophone();
+		} else if (!isViewActive && state !== "off") {
+			this.model.stopAll();
+		}
 	}
 
 	private _showRecordingIndicator() {
