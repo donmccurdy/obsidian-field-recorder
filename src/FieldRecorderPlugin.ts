@@ -140,8 +140,4 @@ export class FieldRecorderPlugin extends Plugin {
 			this.statusBarItemEl = null;
 		}
 	}
-
-	onError(e: unknown) {
-		console.error(e);
-	}
 }
