@@ -19,9 +19,9 @@ const DEFAULT_AUDIO_CONSTRAINTS: MediaStreamConstraints["audio"] = {
 	autoGainControl: false,
 	noiseSuppression: false,
 	echoCancellation: false,
-	sampleRate: 320000,
-	sampleSize: 32,
-	// NOTICE: Setting the channel count can change the default device. Not sure how to manage that, probably can't.
+	// sampleRate: 320000,
+	// sampleSize: 32,
+	// NOTE: Changing channel count may change the selected device...
 	// channelCount: 2
 };
 

@@ -1,9 +1,9 @@
 {
 	"id": "field-recorder",
 	"name": "Field Recorder",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"minAppVersion": "1.11.4",
-	"description": "Field audio capture and playback for Obsidian.",
+	"description": "Field audio capture and playback for Obsidian, with advanced audio settings.",
 	"author": "Don McCurdy",
 	"authorUrl": "https://www.donmccurdy.com/",
 	"fundingUrl": "https://github.com/donmccurdy",
