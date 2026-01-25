@@ -259,11 +259,13 @@ export class FieldRecorderView extends ItemView {
 			);
 
 		await this.model.startMicrophone();
+		this.plugin.updateViewIndicator();
 	}
 
 	async onClose(): Promise<void> {
 		this.model.stopAll();
 		this.formSubscriptions.forEach((unsub) => void unsub());
 		this.formSubscriptions.length = 0;
+		this.plugin.updateViewIndicator();
 	}
 }

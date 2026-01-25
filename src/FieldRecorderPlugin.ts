@@ -20,29 +20,45 @@ export class FieldRecorderPlugin extends Plugin {
 		this.model = new FieldRecorderModel(this.app, this.settings);
 		await this.model.onload();
 
-		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", async () => {
-			await this.toggleView();
-		});
+		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", async () =>
+			this._toggleView(),
+		);
 
+		this._registerCommands();
+
+		this.registerView(
+			VIEW_TYPE_FIELD_RECORDER,
+			(leaf: WorkspaceLeaf) => new FieldRecorderView(leaf, { plugin: this, model: this.model }),
+		);
+
+		this.subscriptions.push(
+			effect(() => {
+				if (this.model.state.value === "recording") {
+					this._showRecordingIndicator();
+				} else {
+					this._hideRecordingIndicator();
+				}
+			}),
+		);
+	}
+
+	onunload() {
+		this.model.onunload();
+		this.subscriptions.forEach((unsub) => void unsub());
+		this.subscriptions.length = 0;
+	}
+
+	private _registerCommands() {
 		this.addCommand({
 			id: "open",
 			name: "Open",
-			callback: async () => {
-				await this.activateView();
-			},
+			callback: async () => this._activateView(),
 		});
 
 		this.addCommand({
 			id: "close",
 			name: "Close",
-			checkCallback: (checking) => {
-				if (checking) {
-					const state = this.model.state.peek();
-					return state === "off" || state === "idle";
-				}
-				void this.deactivateView();
-				return true;
-			},
+			callback: () => this._deactivateView(),
 		});
 
 		this.addCommand({
@@ -74,27 +90,6 @@ export class FieldRecorderPlugin extends Plugin {
 				return true;
 			},
 		});
-
-		this.registerView(
-			VIEW_TYPE_FIELD_RECORDER,
-			(leaf: WorkspaceLeaf) => new FieldRecorderView(leaf, { plugin: this, model: this.model }),
-		);
-
-		this.subscriptions.push(
-			effect(() => {
-				if (this.model.state.value === "recording") {
-					this.showRecordingIndicator();
-				} else {
-					this.hideRecordingIndicator();
-				}
-			}),
-		);
-	}
-
-	onunload() {
-		this.model.onunload();
-		this.subscriptions.forEach((unsub) => void unsub());
-		this.subscriptions.length = 0;
 	}
 
 	async loadSettings() {
@@ -110,36 +105,39 @@ export class FieldRecorderPlugin extends Plugin {
 		await this.model.updateSettings(this.settings);
 	}
 
-	async toggleView() {
+	private async _toggleView() {
 		if (this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0) {
-			await this.deactivateView();
+			await this._deactivateView();
 		} else {
-			await this.activateView();
+			await this._activateView();
 		}
 	}
 
-	async activateView() {
+	private async _activateView() {
 		await this.app.workspace.ensureSideLeaf(VIEW_TYPE_FIELD_RECORDER, "right");
 	}
 
-	async deactivateView() {
+	private async _deactivateView() {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
 	}
 
-	showRecordingIndicator() {
+	updateViewIndicator() {
+		const isViewActive = this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
+		this.ribbonIconEl!.toggleClass("is-active", isViewActive);
+	}
+
+	private _showRecordingIndicator() {
 		this.statusBarItemEl = this.addStatusBarItem();
 		const iconEl = this.statusBarItemEl.createEl("span");
 		iconEl.toggleClass("status-bar-item-icon", true);
 		iconEl.toggleClass("fieldrec-status-bar-icon", true);
 		setIcon(iconEl, "mic");
-		this.ribbonIconEl!.toggleClass("is-active", true);
 	}
 
-	hideRecordingIndicator() {
+	private _hideRecordingIndicator() {
 		if (this.statusBarItemEl) {
 			this.statusBarItemEl.remove();
 			this.statusBarItemEl = null;
-			this.ribbonIconEl!.toggleClass("is-active", false);
 		}
 	}
 
