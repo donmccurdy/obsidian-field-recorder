@@ -1,37 +1,23 @@
+import { FieldRecorderModel } from "FieldRecorderModel";
+import { effect } from "@preact/signals-core";
 import { Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import { VIEW_TYPE_FIELD_RECORDER } from "./constants";
-import { FieldRecorderItemView } from "./FieldRecorderItemView";
+import { FieldRecorderView } from "./FieldRecorderView";
 import { DEFAULT_SETTINGS, type FieldRecorderPluginSettings } from "./settings";
-import { concat, getDefaultFilename, getFileExtension } from "./utils";
-
-type RecordingState = {
-	stream: MediaStream;
-	recorder: MediaRecorder;
-	chunks: Promise<ArrayBuffer>[];
-};
-
-// console.log(navigator.mediaDevices.getSupportedConstraints());
-// navigator.mediaDevices.enumerateDevices().then(console.log);
-// also: voiceIsolation, suppressLocalAudioPlayback
-const DEFAULT_AUDIO_CONSTRAINTS: MediaStreamConstraints["audio"] = {
-	autoGainControl: false,
-	noiseSuppression: false,
-	echoCancellation: false,
-	// sampleRate: 320000,
-	// sampleSize: 32,
-	// NOTE: Changing channel count may change the selected device...
-	// channelCount: 2
-};
 
 export default class FieldRecorderPlugin extends Plugin {
+	model: FieldRecorderModel;
 	settings: FieldRecorderPluginSettings;
-	recordingState: RecordingState | null = null;
 
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
 
+	subscriptions: (() => void)[] = [];
+
 	async onload() {
 		await this.loadSettings();
+
+		this.model = new FieldRecorderModel(this.app, this.settings);
 
 		this.ribbonIconEl = this.addRibbonIcon("mic", "Open field recorder", async () => {
 			await this.app.workspace.ensureSideLeaf(VIEW_TYPE_FIELD_RECORDER, "right");
@@ -46,38 +32,55 @@ export default class FieldRecorderPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "start-recording-audio",
+			id: "start",
 			name: "Start recording audio",
 			checkCallback: (checking) => {
-				if (checking) return !this.recordingState;
-				this.startMicrophone()
-					.then(() => this.startRecording())
-					.catch((e) => this.onError(e));
+				if (checking) return this.model.state.peek() === "idle";
+				this.model.startRecording();
 				return true;
 			},
 		});
 
 		this.addCommand({
-			id: "stop-recording-audio",
+			id: "pause",
+			name: "Pause recording audio",
+			checkCallback: (checking) => {
+				if (checking) return this.model.state.peek() === "recording";
+				this.model.pauseRecording();
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "stop",
 			name: "Stop recording audio",
 			checkCallback: (checking) => {
-				if (checking) return !!this.recordingState;
-				this.stopRecording();
-				this.stopMicrophone();
+				if (checking) return this.model.state.peek() === "recording";
+				this.model.stopRecording();
 				return true;
 			},
 		});
 
 		this.registerView(
 			VIEW_TYPE_FIELD_RECORDER,
-			(leaf: WorkspaceLeaf) => new FieldRecorderItemView(leaf, { plugin: this }),
+			(leaf: WorkspaceLeaf) => new FieldRecorderView(leaf, { plugin: this, model: this.model }),
+		);
+
+		this.subscriptions.push(
+			effect(() => {
+				if (this.model.state.value === "recording") {
+					this.showRecordingIndicator();
+				} else {
+					this.hideRecordingIndicator();
+				}
+			}),
 		);
 	}
 
 	onunload() {
-		if (this.recordingState) {
-			this.stopRecording();
-			this.stopMicrophone();
+		this.model.onunload();
+		for (const unsub of this.subscriptions) {
+			unsub();
 		}
 	}
 
@@ -91,6 +94,7 @@ export default class FieldRecorderPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		await this.model.updateSettings(this.settings);
 	}
 
 	async activateView() {
@@ -107,67 +111,6 @@ export default class FieldRecorderPlugin extends Plugin {
 		await workspace.revealLeaf(leaf);
 	}
 
-	async startMicrophone() {
-		const stream = await navigator.mediaDevices.getUserMedia({
-			audio: DEFAULT_AUDIO_CONSTRAINTS,
-		});
-		const recorder = new MediaRecorder(stream, {
-			audioBitrateMode: this.settings.bitrateMode,
-			audioBitsPerSecond: this.settings.bitrate,
-			mimeType: this.settings.mimeType,
-		});
-		stream.getAudioTracks().forEach((track) => {
-			// console.log(track.label, track.getSettings());
-			track.contentHint = "music"; // 'music' | 'speech' (i can't tell if it works...)
-		});
-		this.recordingState = { stream, recorder, chunks: [] };
-		// console.log(this.recordingState);
-	}
-
-	stopMicrophone() {
-		for (const track of this.recordingState!.stream.getTracks()) {
-			track.stop();
-		}
-		this.recordingState = null;
-	}
-
-	startRecording() {
-		const { recorder, chunks } = this.recordingState!;
-		recorder.start();
-		recorder.addEventListener("dataavailable", (event) => {
-			chunks.push(event.data.arrayBuffer());
-			if (recorder.state === "inactive") {
-				this.saveRecording(chunks, recorder).catch((e) => this.onError(e));
-			}
-		});
-		this.showRecordingIndicator();
-	}
-
-	stopRecording() {
-		this.recordingState!.recorder.stop();
-		this.hideRecordingIndicator();
-	}
-
-	async saveRecording(chunks: Promise<ArrayBuffer>[], recorder: MediaRecorder) {
-		const { workspace, vault, fileManager } = this.app;
-
-		const basename = this.settings.filename || getDefaultFilename();
-		const filename = `${basename}.${getFileExtension(recorder.mimeType)}`;
-		const path = await fileManager.getAvailablePathForAttachment(filename);
-
-		const data = concat(await Promise.all(chunks));
-		const file = await vault.createBinary(path, data);
-
-		const activeEditor = workspace.activeEditor;
-		const activePath = workspace.getActiveFile()?.path;
-		if (activeEditor && activePath) {
-			const markdownLink = fileManager.generateMarkdownLink(file, activePath);
-			activeEditor.editor?.replaceSelection(`!${markdownLink}`);
-		} else {
-			await workspace.getLeaf(true).openFile(file);
-		}
-	}
-
 	showRecordingIndicator() {
 		this.statusBarItemEl = this.addStatusBarItem();
 		const iconEl = this.statusBarItemEl.createEl("span");
@@ -178,9 +121,11 @@ export default class FieldRecorderPlugin extends Plugin {
 	}
 
 	hideRecordingIndicator() {
-		this.statusBarItemEl!.remove();
-		this.statusBarItemEl = null;
-		this.ribbonIconEl!.toggleClass("is-active", false);
+		if (this.statusBarItemEl) {
+			this.statusBarItemEl.remove();
+			this.statusBarItemEl = null;
+			this.ribbonIconEl!.toggleClass("is-active", false);
+		}
 	}
 
 	onError(e: unknown) {

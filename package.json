@@ -26,6 +26,7 @@
 		"typescript-eslint": "8.35.1"
 	},
 	"dependencies": {
+		"@preact/signals-core": "^1.12.2",
 		"obsidian": "latest"
 	}
 }

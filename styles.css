@@ -7,6 +7,12 @@ If your plugin does not need CSS, delete this file.
 
 */
 
+.fieldrec-view {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
 .fieldrec-status-bar-icon {
 	color: var(--text-error);
 }
@@ -18,12 +24,12 @@ If your plugin does not need CSS, delete this file.
 .fieldrec-section-record {
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
+	justify-content: flex-start;
 	width: 100%;
 	min-height: 400px;
 }
 
-.fieldrec-section-record > * {
+.fieldrec-section-record > :not(:first-child) {
 	margin: var(--size-4-2) 0;
 }
 
