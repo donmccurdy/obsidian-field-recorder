@@ -13,11 +13,12 @@ export default class FieldRecorderPlugin extends Plugin {
 	statusBarItemEl: HTMLElement | null = null;
 
 	subscriptions: (() => void)[] = [];
-	3;
+
 	async onload() {
 		await this.loadSettings();
 
 		this.model = new FieldRecorderModel(this.app, this.settings);
+		await this.model.onload();
 
 		this.ribbonIconEl = this.addRibbonIcon("mic", "Open field recorder", async () => {
 			await this.app.workspace.ensureSideLeaf(VIEW_TYPE_FIELD_RECORDER, "right");
@@ -79,9 +80,8 @@ export default class FieldRecorderPlugin extends Plugin {
 
 	onunload() {
 		this.model.onunload();
-		for (const unsub of this.subscriptions) {
-			unsub();
-		}
+		this.subscriptions.forEach((unsub) => void unsub());
+		this.subscriptions.length = 0;
 	}
 
 	async loadSettings() {

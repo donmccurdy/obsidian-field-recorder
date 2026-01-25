@@ -29,15 +29,15 @@ export const MIME_TYPE_TO_EXTENSION: Record<string, string> = {
 	"audio/mp4": "m4a",
 };
 
-export const MIME_TYPE_TO_FORMAT = {
+export const MIME_TYPE_TO_FORMAT: Record<string, string> = {
 	"audio/mpeg": "MP3",
 	"audio/ogg": "OGG",
 	"audio/wav": "WAV",
 	"audio/mp4": "M4A",
-	"audio/webm": "WEBM",
+	"audio/webm": "WebM",
 };
 
-export const SUPPORTED_BITRATES = {
+export const SUPPORTED_BITRATES: Record<string, string> = {
 	"32": "32 kb/s", // lowest
 	"96": "96 kb/s", // low
 	"128": "128 kb/s", // medium-low

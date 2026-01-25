@@ -9,11 +9,34 @@ export class FieldRecorderModel {
 	settings: FieldRecorderPluginSettings;
 	stream: MediaStream | null = null;
 	recorder: MediaRecorder | null = null;
+	inputDevices: Signal<MediaDeviceInfo[]> = signal([]);
+	supportedConstraints: Signal<MediaTrackSupportedConstraints> = signal({});
 	chunks: Promise<ArrayBuffer>[] = [];
+	subscriptions: (() => void)[] = [];
 
 	constructor(app: App, settings: FieldRecorderPluginSettings) {
 		this.app = app;
 		this.settings = settings;
+	}
+
+	async onload() {
+		const devices = await navigator.mediaDevices.enumerateDevices();
+		this.inputDevices.value = devices.filter(({ kind }) => kind === "audioinput");
+		this.supportedConstraints.value = navigator.mediaDevices.getSupportedConstraints();
+
+		const onDeviceChange = () => {
+			this.supportedConstraints.value = navigator.mediaDevices.getSupportedConstraints();
+			navigator.mediaDevices
+				.enumerateDevices()
+				.then((devices) => {
+					this.inputDevices.value = devices.filter(({ kind }) => kind === "audioinput");
+				})
+				.catch(console.error);
+		};
+		navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
+		this.subscriptions.push(() =>
+			navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange),
+		);
 	}
 
 	async updateSettings(settings: FieldRecorderPluginSettings) {
@@ -26,15 +49,18 @@ export class FieldRecorderModel {
 
 	async startMicrophone() {
 		const { settings } = this;
-		const stream = await navigator.mediaDevices.getUserMedia({
+
+		this.stream = await navigator.mediaDevices.getUserMedia({
 			audio: {
 				deviceId: settings.inputDeviceId,
 				autoGainControl: settings.autoGainControl,
 				noiseSuppression: settings.noiseSuppression,
 				echoCancellation: settings.echoCancellation,
+				voiceIsolation: settings.voiceIsolation,
 			},
 		});
-		const recorder = new MediaRecorder(stream, {
+
+		this.recorder = new MediaRecorder(this.stream, {
 			audioBitrateMode: settings.bitrateMode,
 			audioBitsPerSecond: settings.bitrate,
 			mimeType: settings.mimeType,
@@ -45,8 +71,6 @@ export class FieldRecorderModel {
 		// 	track.contentHint = "music"; // 'music' | 'speech' (i can't tell if it works...)
 		// });
 
-		this.stream = stream;
-		this.recorder = recorder;
 		this.state.value = "idle";
 	}
 
@@ -71,9 +95,7 @@ export class FieldRecorderModel {
 			recorder.addEventListener("dataavailable", (event) => {
 				chunks.push(event.data.arrayBuffer());
 				if (recorder.state === "inactive") {
-					this.saveRecording(chunks, recorder).catch((e) => {
-						console.error(e);
-					});
+					this.saveRecording(chunks, recorder).catch(console.error);
 				}
 			});
 		} else {
@@ -127,5 +149,7 @@ export class FieldRecorderModel {
 			this.stopMicrophone();
 		}
 		this.chunks.length = 0;
+		this.subscriptions.forEach((unsub) => void unsub());
+		this.subscriptions.length = 0;
 	}
 }

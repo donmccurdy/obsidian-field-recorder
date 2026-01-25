@@ -1,7 +1,12 @@
 import { effect } from "@preact/signals-core";
 import { ItemView, Setting, setIcon, type WorkspaceLeaf } from "obsidian";
 import { getDefaultFilename } from "utils";
-import { SUPPORTED_BITRATES, SUPPORTED_MIME_TYPES, VIEW_TYPE_FIELD_RECORDER } from "./constants";
+import {
+	MIME_TYPE_TO_FORMAT,
+	SUPPORTED_BITRATES,
+	SUPPORTED_MIME_TYPES,
+	VIEW_TYPE_FIELD_RECORDER,
+} from "./constants";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 import type FieldRecorderPlugin from "./main";
 
@@ -10,26 +15,15 @@ type FieldRecorderViewProps = {
 	model: FieldRecorderModel;
 };
 
-type FieldRecorderViewState = {
-	state: "inactive" | "paused" | "recording";
-	inputDevices: MediaDeviceInfo[];
-	supportedConstraints: MediaTrackSupportedConstraints;
-};
-
 export class FieldRecorderView extends ItemView {
-	private props: FieldRecorderViewProps;
-	private state: FieldRecorderViewState;
+	private plugin: FieldRecorderPlugin;
 	private model: FieldRecorderModel;
 	private subscriptions: (() => void)[] = [];
+	private formSubscriptions: (() => void)[] = [];
 
 	constructor(leaf: WorkspaceLeaf, props: FieldRecorderViewProps) {
 		super(leaf);
-		this.props = props;
-		this.state = {
-			state: "inactive",
-			inputDevices: [],
-			supportedConstraints: {},
-		};
+		this.plugin = props.plugin;
 		this.model = props.model;
 	}
 
@@ -45,23 +39,23 @@ export class FieldRecorderView extends ItemView {
 		return "mic";
 	}
 
+	onload() {
+		this.subscriptions.push(
+			this.model.inputDevices.subscribe(() => void this.onOpen()),
+			this.model.supportedConstraints.subscribe(() => void this.onOpen()),
+		);
+	}
+
+	onunload() {
+		this.subscriptions.forEach((unsub) => void unsub());
+		this.subscriptions.length = 0;
+	}
+
 	protected async onOpen(): Promise<void> {
-		const { containerEl } = this;
-		const { plugin } = this.props;
+		const { plugin, containerEl } = this;
 
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
-
-		const devices = await navigator.mediaDevices.enumerateDevices();
-		this.state.inputDevices = devices.filter(({ kind }) => kind === "audioinput");
-		// TODO: Needs cleanup? Needs better lifecycle?
-		navigator.mediaDevices.addEventListener("devicechange", () => {
-			if (this.state.state === "inactive") {
-				void this.onOpen();
-			}
-		});
-
-		this.state.supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
 
 		const recordSectionEl = containerEl.createEl("section", {
 			cls: ["fieldrec-section", "fieldrec-section-record"],
@@ -76,11 +70,13 @@ export class FieldRecorderView extends ItemView {
 				spellcheck: "false",
 			},
 		});
-		// TODO: Needs cleanup?
-		filenameEl.addEventListener("change", () => {
+
+		const onFilenameChange = () => {
 			plugin.settings.filename = filenameEl.value;
 			void plugin.saveSettings();
-		});
+		};
+		filenameEl.addEventListener("change", onFilenameChange);
+		this.formSubscriptions.push(() => filenameEl.removeEventListener("change", onFilenameChange));
 
 		const canvasEl = recordSectionEl.createEl("canvas", {
 			attr: {
@@ -104,9 +100,10 @@ export class FieldRecorderView extends ItemView {
 			cls: ["fieldrec-btn-icon", "-record"],
 		});
 		setIcon(recordBtnEl, "mic");
-		recordBtnEl.addEventListener("click", () => {
-			this.model.startRecording();
-		});
+
+		const onRecord = () => this.model.startRecording();
+		recordBtnEl.addEventListener("click", onRecord);
+		this.formSubscriptions.push(() => recordBtnEl.removeEventListener("click", onRecord));
 
 		const pauseBtnEl = btnRowEl.createEl("button", {
 			title: "Pause",
@@ -114,9 +111,9 @@ export class FieldRecorderView extends ItemView {
 			attr: { disabled: "" },
 		});
 		setIcon(pauseBtnEl, "pause");
-		pauseBtnEl.addEventListener("click", () => {
-			this.model.pauseRecording();
-		});
+		const onPause = () => this.model.pauseRecording();
+		pauseBtnEl.addEventListener("click", onPause);
+		this.formSubscriptions.push(() => pauseBtnEl.removeEventListener("click", onPause));
 
 		const stopBtnEl = btnRowEl.createEl("button", {
 			title: "Stop",
@@ -124,18 +121,11 @@ export class FieldRecorderView extends ItemView {
 			attr: { disabled: "" },
 		});
 		setIcon(stopBtnEl, "square");
-		stopBtnEl.addEventListener("click", () => {
-			this.model.stopRecording();
-		});
+		const onStop = () => this.model.stopRecording();
+		stopBtnEl.addEventListener("click", onStop);
+		this.formSubscriptions.push(() => stopBtnEl.removeEventListener("click", onStop));
 
-		// const discardBtnEl = btnRowEl.createEl("button", {
-		// 	title: "Discard",
-		// 	cls: "fieldrec-btn-icon",
-		// 	attr: { disabled: "" },
-		// });
-		// setIcon(discardBtnEl, "trash");
-
-		this.subscriptions.push(
+		this.formSubscriptions.push(
 			effect(() => {
 				const state = this.model.state.value;
 				recordBtnEl.disabled = state === "off" || state === "recording";
@@ -149,8 +139,11 @@ export class FieldRecorderView extends ItemView {
 		});
 		settingsSectionEl.createEl("h5", { text: "Audio settings" });
 
+		const supportedConstraints = this.model.supportedConstraints.peek();
+		const inputDevices = this.model.inputDevices.peek();
+
 		const inputOptions = Object.fromEntries(
-			this.state.inputDevices.map((device) => {
+			inputDevices.map((device) => {
 				const label = device.label.replace(/\(.*\)/, "").trim();
 				return [device.deviceId, label];
 			}),
@@ -179,7 +172,9 @@ export class FieldRecorderView extends ItemView {
 		new Setting(settingsSectionEl).setName("Format").addDropdown((dropdown) =>
 			dropdown
 				.addOptions(
-					Object.fromEntries(SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, mimeType])),
+					Object.fromEntries(
+						SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, MIME_TYPE_TO_FORMAT[mimeType]!]),
+					),
 				)
 				.setValue(plugin.settings.mimeType)
 				.onChange(async (value) => {
@@ -188,7 +183,7 @@ export class FieldRecorderView extends ItemView {
 				}),
 		);
 
-		const autoGainControlAvailable = this.state.supportedConstraints.autoGainControl === true;
+		const autoGainControlAvailable = supportedConstraints.autoGainControl === true;
 		new Setting(settingsSectionEl)
 			.setName("Auto gain control")
 			.setDisabled(!autoGainControlAvailable)
@@ -207,14 +202,13 @@ export class FieldRecorderView extends ItemView {
 					});
 			});
 
-		const noiseSuppressionAvailable = this.state.supportedConstraints.noiseSuppression === true;
+		// TODO: Has no effect if voice isolation is on, and should be disabled.
+		const noiseSuppressionAvailable = supportedConstraints.noiseSuppression === true;
 		new Setting(settingsSectionEl)
 			.setName("Noise suppression")
 			.setDisabled(!noiseSuppressionAvailable)
 			.setDesc(
-				noiseSuppressionAvailable
-					? "Filters audio to remove background noise."
-					: "Unavailable on current device.",
+				noiseSuppressionAvailable ? "Removes background noise." : "Unavailable on current device.",
 			)
 			.addToggle((toggle) => {
 				toggle
@@ -226,7 +220,26 @@ export class FieldRecorderView extends ItemView {
 					});
 			});
 
-		const echoCancellationAvailable = this.state.supportedConstraints.echoCancellation === true;
+		const voiceIsolationAvailable = supportedConstraints.voiceIsolation === true;
+		new Setting(settingsSectionEl)
+			.setName("Voice isolation")
+			.setDisabled(!voiceIsolationAvailable)
+			.setDesc(
+				voiceIsolationAvailable
+					? "Removes non-vocal noise; stronger form of noise suppression."
+					: "Unavailable on current device.",
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setDisabled(!voiceIsolationAvailable)
+					.setValue(plugin.settings.voiceIsolation)
+					.onChange(async (value) => {
+						plugin.settings.voiceIsolation = value;
+						await plugin.saveSettings();
+					});
+			});
+
+		const echoCancellationAvailable = supportedConstraints.echoCancellation === true;
 		new Setting(settingsSectionEl)
 			.setName("Echo cancellation")
 			.setDisabled(!echoCancellationAvailable)
@@ -250,8 +263,7 @@ export class FieldRecorderView extends ItemView {
 
 	async onClose(): Promise<void> {
 		this.model.stopMicrophone();
-		for (const unsub of this.subscriptions) {
-			unsub();
-		}
+		this.formSubscriptions.forEach((unsub) => void unsub());
+		this.formSubscriptions.length = 0;
 	}
 }

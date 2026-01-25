@@ -24,6 +24,10 @@
 	margin: var(--size-4-2) 0;
 }
 
+.fieldrec-section .setting-item.is-disabled {
+	opacity: 0.5;
+}
+
 .fieldrec-section + .fieldrec-section {
 	border-top: 1px solid var(--background-modifier-border);
 }
