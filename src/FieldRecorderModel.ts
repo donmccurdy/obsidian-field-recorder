@@ -1,3 +1,4 @@
+import WaveformProcessorModule from "inline:./WaveformProcessor.js";
 import { type Signal, signal } from "@preact/signals-core";
 import type { App } from "obsidian";
 import type { FieldRecorderPluginSettings } from "./constants";
@@ -10,7 +11,8 @@ export class FieldRecorderModel {
 	audioCtx: AudioContext | null = null;
 	sourceNode: MediaStreamAudioSourceNode | null = null;
 	gainNode: GainNode | null;
-	analyzerNode: AnalyserNode | null;
+	workletNode: AudioWorkletNode | null;
+	workletView: DataView | null;
 	destinationNode: MediaStreamAudioDestinationNode | null = null;
 	stream: MediaStream | null = null;
 	recorder: MediaRecorder | null = null;
@@ -59,7 +61,8 @@ export class FieldRecorderModel {
 	async startMicrophone() {
 		const { settings } = this;
 
-		// TODO: sampleRate, sampleSize?
+		// TODO: Both getUserMedia and AudioContext take a sampleRate parameter.
+
 		this.stream = await navigator.mediaDevices.getUserMedia({
 			audio: {
 				deviceId: settings.inputDeviceId,
@@ -70,29 +73,34 @@ export class FieldRecorderModel {
 			},
 		});
 
-		// TODO: sampleRate?
 		this.audioCtx = new AudioContext({ sinkId: { type: "none" } });
+
+		const blob = new Blob([WaveformProcessorModule], { type: "application/javascript" });
+		const objectURL = URL.createObjectURL(blob);
+		await this.audioCtx.audioWorklet.addModule(objectURL);
+
 		this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
 		this.gainNode = this.audioCtx.createGain();
-		this.analyzerNode = this.audioCtx.createAnalyser();
+		this.workletNode = new AudioWorkletNode(this.audioCtx, "waveform-processor");
 		this.destinationNode = this.audioCtx.createMediaStreamDestination();
 
-		this.analyzerNode.fftSize = 2048;
+		this.workletNode.port.postMessage({ type: "worklet-init" });
+		this.workletNode.port.onmessage = (msg) => {
+			if ((msg.data as { type?: string })?.type === "worklet-init") {
+				const data = msg.data as { type: string; buffer: SharedArrayBuffer };
+				this.workletView = new DataView(data.buffer);
+			}
+		};
 
 		this.sourceNode.connect(this.gainNode);
-		this.gainNode.connect(this.analyzerNode);
-		this.analyzerNode.connect(this.destinationNode);
+		this.gainNode.connect(this.workletNode);
+		this.gainNode.connect(this.destinationNode);
 
 		this.recorder = new MediaRecorder(this.destinationNode.stream, {
 			audioBitrateMode: settings.bitrateMode,
 			audioBitsPerSecond: settings.bitrate,
 			mimeType: settings.mimeType,
 		});
-
-		// stream.getAudioTracks().forEach((track) => {
-		// 	// console.log(track.label, track.getSettings());
-		// 	track.contentHint = "music"; // 'music' | 'speech' (i can't tell if it works...)
-		// });
 
 		this.state.value = "idle";
 
@@ -107,9 +115,9 @@ export class FieldRecorderModel {
 
 		this.recorder = null;
 		this.stream = null;
-		this.gainNode = null;
-		this.analyzerNode = null;
 		this.sourceNode = null;
+		this.gainNode = null;
+		this.workletNode = null;
 		this.destinationNode = null;
 		this.audioCtx = null;
 		this.state.value = "off";

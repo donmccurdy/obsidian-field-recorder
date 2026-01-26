@@ -1,28 +1,50 @@
 import { Component } from "obsidian";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 
+// TODO: Need to update build system so I can reuse this code.
+const BinLayout = {
+	TIMESTAMP_U32: 0,
+	VOLUME_F32: 4,
+	CLIPPED_U8: 8,
+};
+const BIN_BYTE_LENGTH = BinLayout.CLIPPED_U8 + 4;
+
+const HeaderLayout = {
+	BIN_COUNT_U32: 0,
+	BIN_INDEX_ACTIVE_U32: 4,
+};
+const HEADER_BYTE_LENGTH = 8;
+
 export type WaveformViewProps = {
 	canvasEl: HTMLCanvasElement;
-	accentColor: string;
-	backgroundColor: string;
 	model: FieldRecorderModel;
+};
+
+type WaveformPalette = {
+	fgColor: string;
+	bgColor: string;
+	clipColor: string;
 };
 
 export class WaveformView extends Component {
 	model: FieldRecorderModel;
 	canvasEl: HTMLCanvasElement;
 	ctx: CanvasRenderingContext2D;
-	accentColor: string;
-	backgroundColor: string;
-	byteTimeDomainData: Uint8Array;
+	palette: WaveformPalette;
 
 	constructor(props: WaveformViewProps) {
 		super();
 		this.model = props.model;
 		this.canvasEl = props.canvasEl;
 		this.ctx = props.canvasEl.getContext("2d")!;
-		this.accentColor = props.accentColor;
-		this.backgroundColor = props.backgroundColor;
+
+		// TODO: Make reactive.
+		const computedStyle = window.getComputedStyle(props.canvasEl);
+		this.palette = {
+			fgColor: computedStyle.getPropertyValue("--interactive-accent"),
+			bgColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
+			clipColor: computedStyle.getPropertyValue("--color-red"),
+		};
 	}
 
 	onload() {
@@ -41,12 +63,12 @@ export class WaveformView extends Component {
 	}
 
 	render(time: DOMHighResTimeStamp) {
-		const { model, canvasEl, ctx, backgroundColor, accentColor } = this;
+		const { model, canvasEl, ctx, palette } = this;
 		const { width, height } = canvasEl;
 		const state = model.state.peek();
 
 		// background
-		ctx.fillStyle = backgroundColor;
+		ctx.fillStyle = palette.bgColor;
 		ctx.fillRect(0, 0, width, height);
 
 		if (state === "off") {
@@ -54,37 +76,31 @@ export class WaveformView extends Component {
 		}
 
 		// timestamp
-		ctx.fillStyle = accentColor;
-		ctx.fillText(time.toFixed(2), 4, height - 4);
+		ctx.fillStyle = palette.fgColor;
+		ctx.textAlign = "right";
+		ctx.fillText(time.toFixed(2), width - 4, height - 4);
 
 		// waveform
-		this.byteTimeDomainData ||= new Uint8Array(model.analyzerNode!.fftSize);
-		const array = this.byteTimeDomainData;
-		model.analyzerNode!.getByteTimeDomainData(array);
+		if (model.workletView) {
+			const binCount = model.workletView.getUint32(HeaderLayout.BIN_COUNT_U32, true);
+			const binIndexActive = model.workletView.getUint32(HeaderLayout.BIN_INDEX_ACTIVE_U32, true);
+			const binSpacing = Math.ceil((width - 8) / binCount);
+			const binWidth = Math.floor(binSpacing / 2);
+			for (let i = 0; i < binCount; i++) {
+				const binIndex =
+					binIndexActive - i >= 0 ? binIndexActive - i : binCount + binIndexActive - i;
+				const byteOffset = HEADER_BYTE_LENGTH + binIndex * BIN_BYTE_LENGTH;
+				const volume = model.workletView.getFloat32(byteOffset + BinLayout.VOLUME_F32, true);
+				const clipped = model.workletView.getUint8(byteOffset + BinLayout.CLIPPED_U8);
 
-		ctx.lineWidth = 2;
-		ctx.strokeStyle = accentColor;
+				if (volume === 0) continue;
 
-		ctx.beginPath();
-
-		const sliceWidth = (width - 8) / array.length;
-		let x = 4;
-
-		for (let i = 0; i < array.length; i++) {
-			const v = array[i]! / 128.0;
-			const y = (v * height) / 2;
-
-			if (i === 0) {
-				ctx.moveTo(x, y);
-			} else {
-				ctx.lineTo(x, y);
+				const x = width - i * binSpacing - 4 - binWidth;
+				const barHeight = Math.max((volume * height * 2) / 3, 4);
+				ctx.fillStyle = clipped ? palette.clipColor : palette.fgColor;
+				ctx.fillRect(x, height / 2 - barHeight / 2, binWidth, barHeight);
 			}
-
-			x += sliceWidth;
 		}
-
-		ctx.lineTo(width - 4, height / 2);
-		ctx.stroke();
 	}
 
 	onResize() {

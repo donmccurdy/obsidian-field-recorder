@@ -47,7 +47,7 @@ export class FieldRecorderView extends ItemView {
 	}
 
 	protected async onOpen(): Promise<void> {
-		const { plugin, containerEl } = this;
+		const { plugin, model, containerEl } = this;
 
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
@@ -79,16 +79,8 @@ export class FieldRecorderView extends ItemView {
 				height: 100,
 			},
 		});
-		const computedStyle = window.getComputedStyle(canvasEl);
 
-		this.waveformView = this.addChild(
-			new WaveformView({
-				model: this.model,
-				canvasEl,
-				accentColor: computedStyle.getPropertyValue("--interactive-accent"),
-				backgroundColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
-			}),
-		);
+		this.waveformView = this.addChild(new WaveformView({ model, canvasEl }));
 
 		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
 
@@ -98,7 +90,7 @@ export class FieldRecorderView extends ItemView {
 		});
 		setIcon(recordBtnEl, "mic");
 
-		const onRecord = () => this.model.startRecording();
+		const onRecord = () => model.startRecording();
 		recordBtnEl.addEventListener("click", onRecord);
 		this.formSubscriptions.push(() => recordBtnEl.removeEventListener("click", onRecord));
 
@@ -108,7 +100,7 @@ export class FieldRecorderView extends ItemView {
 			attr: { disabled: "" },
 		});
 		setIcon(pauseBtnEl, "pause");
-		const onPause = () => this.model.pauseRecording();
+		const onPause = () => model.pauseRecording();
 		pauseBtnEl.addEventListener("click", onPause);
 		this.formSubscriptions.push(() => pauseBtnEl.removeEventListener("click", onPause));
 
@@ -118,13 +110,13 @@ export class FieldRecorderView extends ItemView {
 			attr: { disabled: "" },
 		});
 		setIcon(stopBtnEl, "square");
-		const onStop = () => this.model.stopRecording();
+		const onStop = () => model.stopRecording();
 		stopBtnEl.addEventListener("click", onStop);
 		this.formSubscriptions.push(() => stopBtnEl.removeEventListener("click", onStop));
 
 		this.formSubscriptions.push(
 			effect(() => {
-				const state = this.model.state.value;
+				const state = model.state.value;
 				recordBtnEl.disabled = state === "off" || state === "recording";
 				pauseBtnEl.disabled = state !== "recording";
 				stopBtnEl.disabled = state === "off" || state === "idle";
@@ -137,8 +129,8 @@ export class FieldRecorderView extends ItemView {
 
 		new Setting(settingsSectionEl).setName("Audio settings").setHeading();
 
-		const supportedConstraints = this.model.supportedConstraints.peek();
-		const inputDevices = this.model.inputDevices.peek();
+		const supportedConstraints = model.supportedConstraints.peek();
+		const inputDevices = model.inputDevices.peek();
 
 		const inputOptions = Object.fromEntries(
 			inputDevices.map((device) => {
