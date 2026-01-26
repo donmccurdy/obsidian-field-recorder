@@ -2,6 +2,7 @@ import WaveformProcessorModule from "inline:./WaveformProcessor.js";
 import { type Signal, signal } from "@preact/signals-core";
 import type { App } from "obsidian";
 import type { FieldRecorderPluginSettings } from "./constants";
+import { Timer } from "./Timer";
 import { assert, concat, getDefaultFilename, getFileExtension } from "./utils";
 
 export class FieldRecorderModel {
@@ -16,6 +17,7 @@ export class FieldRecorderModel {
 	destinationNode: MediaStreamAudioDestinationNode | null = null;
 	stream: MediaStream | null = null;
 	recorder: MediaRecorder | null = null;
+	timer = new Timer();
 	inputDevices: Signal<MediaDeviceInfo[]> = signal([]);
 	supportedConstraints: Signal<MediaTrackSupportedConstraints> = signal({});
 	chunks: Promise<ArrayBuffer>[] = [];
@@ -141,6 +143,7 @@ export class FieldRecorderModel {
 		}
 
 		this.state.value = "recording";
+		this.timer.start();
 	}
 
 	pauseRecording() {
@@ -148,6 +151,7 @@ export class FieldRecorderModel {
 		assert(state.value === "recording");
 		recorder!.pause();
 		this.state.value = "paused";
+		this.timer.pause();
 	}
 
 	stopRecording() {
@@ -155,6 +159,7 @@ export class FieldRecorderModel {
 		assert(state.value === "recording" || state.value === "paused");
 		recorder!.stop();
 		this.state.value = "idle";
+		this.timer.stop();
 		this.chunks = [];
 	}
 

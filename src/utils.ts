@@ -38,3 +38,12 @@ export function assert(condition: unknown, msg = "Assertion failed"): asserts co
 		throw new Error(msg);
 	}
 }
+
+export function formatDuration(ms: number): string {
+	let seconds = Math.floor(ms / 1000);
+	const hours = Math.floor(seconds / 3600);
+	seconds = seconds % 3600;
+	const minutes = Math.floor(seconds / 60);
+	seconds = seconds % 60;
+	return [hours, minutes, seconds].map((v: number) => String(v).padStart(2, "0")).join(":");
+}

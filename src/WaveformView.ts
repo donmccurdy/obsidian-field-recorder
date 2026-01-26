@@ -1,5 +1,6 @@
 import { Component } from "obsidian";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
+import { formatDuration } from "./utils";
 
 // TODO: Need to update build system so I can reuse this code.
 const BinLayout = {
@@ -14,6 +15,8 @@ const HeaderLayout = {
 	BIN_INDEX_ACTIVE_U32: 4,
 };
 const HEADER_BYTE_LENGTH = 8;
+
+const PAD = 4;
 
 export type WaveformViewProps = {
 	canvasEl: HTMLCanvasElement;
@@ -49,9 +52,9 @@ export class WaveformView extends Component {
 
 	onload() {
 		let handle: number;
-		const animate = (time: DOMHighResTimeStamp) => {
+		const animate = () => {
 			handle = requestAnimationFrame(animate);
-			this.render(time);
+			this.render();
 		};
 		handle = requestAnimationFrame(animate);
 		this.register(() => cancelAnimationFrame(handle));
@@ -62,7 +65,7 @@ export class WaveformView extends Component {
 		this.onResize();
 	}
 
-	render(time: DOMHighResTimeStamp) {
+	render() {
 		const { model, canvasEl, ctx, palette } = this;
 		const { width, height } = canvasEl;
 		const state = model.state.peek();
@@ -76,9 +79,13 @@ export class WaveformView extends Component {
 		}
 
 		// timestamp
-		ctx.fillStyle = palette.fgColor;
-		ctx.textAlign = "right";
-		ctx.fillText(time.toFixed(2), width - 4, height - 4);
+		if (state === "recording" || state === "paused") {
+			const durationMs = model.timer.getDurationMs();
+			ctx.fillStyle = palette.fgColor;
+			ctx.textAlign = "right";
+			ctx.font = "12px monospace";
+			ctx.fillText(formatDuration(durationMs), width - PAD * 2, height - PAD * 2);
+		}
 
 		// waveform
 		if (model.workletView) {
@@ -95,7 +102,7 @@ export class WaveformView extends Component {
 
 				if (volume === 0) continue;
 
-				const x = width - i * binSpacing - 4 - binWidth;
+				const x = width - i * binSpacing - PAD - binWidth;
 				const barHeight = Math.max((volume * height * 2) / 3, 4);
 				ctx.fillStyle = clipped ? palette.clipColor : palette.fgColor;
 				ctx.fillRect(x, height / 2 - barHeight / 2, binWidth, barHeight);
