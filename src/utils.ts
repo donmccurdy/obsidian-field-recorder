@@ -41,9 +41,18 @@ export function assert(condition: unknown, msg = "Assertion failed"): asserts co
 
 export function formatDuration(ms: number): string {
 	let seconds = Math.floor(ms / 1000);
-	const hours = Math.floor(seconds / 3600);
+
+	const hh = String(Math.floor(seconds / 3600)).padStart(2, "0");
+
 	seconds = seconds % 3600;
-	const minutes = Math.floor(seconds / 60);
-	seconds = seconds % 60;
-	return [hours, minutes, seconds].map((v: number) => String(v).padStart(2, "0")).join(":");
+
+	const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+	const ss = String(seconds % 60).padStart(2, "0");
+	const cc = String(Math.floor((ms % 1000) / 10)).padStart(2, "0");
+
+	if (hh === "00") {
+		return `${mm}:${ss}.${cc}`;
+	}
+
+	return `${hh}:${mm}:${ss}.${cc}`;
 }
