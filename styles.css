@@ -4,8 +4,16 @@
 	justify-content: space-between;
 }
 
+/* TODO: accent or yellow while monitoring, red with time while recording. */
+.status-bar-item.plugin-field-recorder {
+	background: var(--color-accent);
+	justify-content: center;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
 .fieldrec-status-bar-icon {
-	color: var(--text-error);
+	color: var(--text-on-accent);
 }
 
 .fieldrec-section {
@@ -84,5 +92,5 @@
 	height: 150px;
 	image-rendering: pixelated;
 	border: var(--input-border-width) solid var(--background-modifier-border);
-	border-radius: var(--input-radius);
+	border-radius: calc(min(var(--input-radius), var(--input-height) / 2));
 }
