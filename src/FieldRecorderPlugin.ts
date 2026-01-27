@@ -1,12 +1,13 @@
 import { FieldRecorderModel } from "FieldRecorderModel";
 import { effect } from "@preact/signals-core";
-import { Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	type FieldRecorderPluginSettings,
 	VIEW_TYPE_FIELD_RECORDER,
 } from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
+import { getDefaultFilename, getFileExtension } from "./utils";
 
 export class FieldRecorderPlugin extends Plugin {
 	model: FieldRecorderModel;
@@ -18,7 +19,7 @@ export class FieldRecorderPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.model = new FieldRecorderModel(this.app, this.settings);
+		this.model = new FieldRecorderModel(this, this.settings);
 		await this.model.onload();
 
 		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", async () =>
@@ -130,6 +131,24 @@ export class FieldRecorderPlugin extends Plugin {
 			await this.model.startMicrophone();
 		} else if (!isViewActive && state !== "off") {
 			this.model.stopAll();
+		}
+	}
+
+	async saveRecording(data: Uint8Array) {
+		const { workspace, vault, fileManager } = this.app;
+
+		const basename = this.settings.filename || getDefaultFilename();
+		const filename = `${basename}.${getFileExtension(this.settings.mimeType)}`;
+		const path = await fileManager.getAvailablePathForAttachment(filename);
+		const file = await vault.createBinary(path, data);
+
+		const recentLeaf = workspace.getMostRecentLeaf();
+		if (recentLeaf && recentLeaf.view instanceof MarkdownView && recentLeaf.view.file) {
+			const recentFilePath = recentLeaf.view.file.path;
+			const markdownLink = fileManager.generateMarkdownLink(file, recentFilePath);
+			recentLeaf.view.editor.replaceSelection(`!${markdownLink}`);
+		} else {
+			await workspace.getLeaf(true).openFile(file);
 		}
 	}
 

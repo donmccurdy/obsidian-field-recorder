@@ -1,12 +1,14 @@
+import type { FieldRecorderPlugin } from "FieldRecorderPlugin";
 import { type Signal, signal } from "@preact/signals-core";
-import type { App } from "obsidian";
 import type { FieldRecorderPluginSettings } from "./constants";
 import { Timer } from "./Timer";
-import { assert, concat, getDefaultFilename, getFileExtension } from "./utils";
+import { assert, concat } from "./utils";
 import WaveformProcessorModule from "./WaveformProcessor.worklet.js?inline";
 
 export class FieldRecorderModel {
-	app: App;
+	plugin: FieldRecorderPlugin;
+
+	// TODO: Too many top-level properties!
 	state: Signal<"off" | "idle" | "paused" | "recording"> = signal("off");
 	settings: FieldRecorderPluginSettings;
 	audioCtx: AudioContext | null = null;
@@ -23,8 +25,8 @@ export class FieldRecorderModel {
 	chunks: Promise<ArrayBuffer>[] = [];
 	subscriptions: (() => void)[] = [];
 
-	constructor(app: App, settings: FieldRecorderPluginSettings) {
-		this.app = app;
+	constructor(plugin: FieldRecorderPlugin, settings: FieldRecorderPluginSettings) {
+		this.plugin = plugin;
 		this.settings = settings;
 	}
 
@@ -102,6 +104,13 @@ export class FieldRecorderModel {
 			mimeType: settings.mimeType,
 		});
 
+		this.recorder.addEventListener("dataavailable", (event) => {
+			this.chunks.push(event.data.arrayBuffer());
+			if (this.recorder!.state === "inactive") {
+				void this._onRecordingEnd();
+			}
+		});
+
 		this.state.value = "idle";
 
 		this._updateAudioNodes();
@@ -124,18 +133,12 @@ export class FieldRecorderModel {
 	}
 
 	startRecording() {
-		const { state, recorder, chunks } = this;
+		const { state, recorder } = this;
 		assert(state.value === "idle" || state.value === "paused");
 		assert(recorder);
 
 		if (state.value === "idle") {
 			recorder.start();
-			recorder.addEventListener("dataavailable", (event) => {
-				chunks.push(event.data.arrayBuffer());
-				if (recorder.state === "inactive") {
-					this.saveRecording(chunks, recorder).catch(console.error);
-				}
-			});
 		} else {
 			recorder.resume();
 		}
@@ -158,7 +161,6 @@ export class FieldRecorderModel {
 		recorder!.stop();
 		this.state.value = "idle";
 		this.timer.stop();
-		this.chunks = [];
 	}
 
 	stopAll() {
@@ -180,24 +182,10 @@ export class FieldRecorderModel {
 		}
 	}
 
-	async saveRecording(chunks: Promise<ArrayBuffer>[], recorder: MediaRecorder) {
-		const { workspace, vault, fileManager } = this.app;
-
-		const basename = this.settings.filename || getDefaultFilename();
-		const filename = `${basename}.${getFileExtension(recorder.mimeType)}`;
-		const path = await fileManager.getAvailablePathForAttachment(filename);
-
-		const data = concat(await Promise.all(chunks));
-		const file = await vault.createBinary(path, data);
-
-		const activeEditor = workspace.activeEditor;
-		const activePath = workspace.getActiveFile()?.path;
-		if (activeEditor && activePath) {
-			const markdownLink = fileManager.generateMarkdownLink(file, activePath);
-			activeEditor.editor?.replaceSelection(`!${markdownLink}`);
-		} else {
-			await workspace.getLeaf(true).openFile(file);
-		}
+	private async _onRecordingEnd() {
+		const chunks = await Promise.all(this.chunks);
+		await this.plugin.saveRecording(concat(chunks));
+		this.chunks.length = 0;
 	}
 
 	onunload() {
