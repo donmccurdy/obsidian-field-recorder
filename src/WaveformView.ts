@@ -27,17 +27,10 @@ export class WaveformView extends Component {
 		this.model = props.model;
 		this.canvasEl = props.canvasEl;
 		this.ctx = props.canvasEl.getContext("2d")!;
-
-		// TODO: Make reactive.
-		const computedStyle = window.getComputedStyle(props.canvasEl);
-		this.palette = {
-			fgColor: computedStyle.getPropertyValue("--interactive-accent"),
-			bgColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
-			clipColor: computedStyle.getPropertyValue("--color-red"),
-		};
 	}
 
 	onload() {
+		// Start animation loop.
 		let handle: number;
 		const animate = () => {
 			handle = requestAnimationFrame(animate);
@@ -46,16 +39,41 @@ export class WaveformView extends Component {
 		handle = requestAnimationFrame(animate);
 		this.register(() => cancelAnimationFrame(handle));
 
+		// Start resize observer.
 		const resizeObserver = new ResizeObserver(() => this.onResize());
 		resizeObserver.observe(this.canvasEl, { box: "content-box" });
 		this.register(() => resizeObserver.disconnect());
 		this.onResize();
 	}
 
+	updatePalette() {
+		// Component initializes before ancestors are in the DOM.
+		if (!document.body.contains(this.canvasEl)) {
+			return;
+		}
+
+		const computedStyle = window.getComputedStyle(this.canvasEl);
+		this.palette = {
+			fgColor: computedStyle.getPropertyValue("--interactive-accent"),
+			bgColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
+			clipColor: computedStyle.getPropertyValue("--color-red"),
+		};
+	}
+
 	render() {
-		const { model, canvasEl, ctx, palette } = this;
+		const { model, canvasEl, ctx } = this;
 		const { width, height } = canvasEl;
 		const state = model.state.peek();
+
+		// TODO: Make reactive, theme could change!
+		if (!this.palette) {
+			this.updatePalette();
+		}
+
+		const palette = this.palette;
+		if (!palette) {
+			return;
+		}
 
 		// background
 		ctx.fillStyle = palette.bgColor;
