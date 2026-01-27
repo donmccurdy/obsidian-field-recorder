@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // DEFINES
 
-declare module "inline:*" {
+declare module "*?inline" {
 	const text: string;
 	export default text;
 }

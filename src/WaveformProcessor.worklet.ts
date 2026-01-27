@@ -1,25 +1,17 @@
-// TODO: Need to update build system so I can reuse this code.
-const BinLayout = {
-	TIMESTAMP_U32: 0,
-	VOLUME_F32: 4,
-	CLIPPED_U8: 8,
-};
-
-const WINDOW_MS = 4000;
-const BIN_COUNT = 32;
-const BIN_SIZE_MS = WINDOW_MS / BIN_COUNT;
-const BIN_BYTE_LENGTH = BinLayout.CLIPPED_U8 + 4;
-const CLIP_LEVEL = 0.98;
-
-const HeaderLayout = {
-	BIN_COUNT_U32: 0,
-	BIN_INDEX_ACTIVE_U32: 4,
-};
-const HEADER_BYTE_LENGTH = 8;
+import {
+	BIN_BYTE_LENGTH,
+	BIN_COUNT,
+	BIN_SIZE_MS,
+	BinLayout,
+	CLIP_LEVEL,
+	HEADER_BYTE_LENGTH,
+	HeaderLayout,
+} from "./layout";
 
 /**
- * Audio processor for measuring volume and detecting clipping. This file is
- * intentionally written in JavaScript, to be inlined into builds.
+ * Audio processor for measuring volume and detecting clipping. Module should
+ * avoid importing other code with rare exceptions (`./layout.ts`), see
+ * `esbuild-plugin-inline-worklet.mjs`.
  *
  * References:
  * - https://github.com/cwilso/volume-meter
@@ -39,21 +31,16 @@ class WaveformProcessor extends AudioWorkletProcessor {
 	}
 
 	init() {
-		this.port.onmessage = (msg) => {
-			if (msg.data.type === "worklet-init") {
+		this.port.onmessage = (msg: { data?: { type?: string } }) => {
+			if (msg.data?.type === "worklet-init") {
 				this.port.postMessage({ type: "worklet-init", buffer: this.arrayBuffer });
 			}
 		};
 	}
 
-	/**
-	 * @param {Float32Array[][]} inputs
-	 * @param {Float32Array[][]} _outputs
-	 * @param {unknown} _parameters
-	 */
-	process(inputs, _outputs, _parameters) {
+	process(inputs: Float32Array[][], _outputs: Float32Array[][], _parameters: unknown) {
 		const view = this.view;
-		const input = inputs[0][0];
+		const input = inputs[0]![0]!;
 		const inputLength = input.length;
 
 		const timeMs = Date.now() - this.startTimeMs;
@@ -71,7 +58,7 @@ class WaveformProcessor extends AudioWorkletProcessor {
 		let clipped = view.getUint8(byteOffset + BinLayout.CLIPPED_U8) === 1;
 
 		for (let i = 0; i < inputLength; i++) {
-			const sample = Math.abs(input[i]);
+			const sample = Math.abs(input[i]!);
 			if (sample >= CLIP_LEVEL) {
 				clipped = true;
 				volume = 1;

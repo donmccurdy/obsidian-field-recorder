@@ -1,20 +1,7 @@
 import { Component } from "obsidian";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
+import { BIN_BYTE_LENGTH, BinLayout, HEADER_BYTE_LENGTH, HeaderLayout } from "./layout";
 import { formatDuration } from "./utils";
-
-// TODO: Need to update build system so I can reuse this code.
-const BinLayout = {
-	TIMESTAMP_U32: 0,
-	VOLUME_F32: 4,
-	CLIPPED_U8: 8,
-};
-const BIN_BYTE_LENGTH = BinLayout.CLIPPED_U8 + 4;
-
-const HeaderLayout = {
-	BIN_COUNT_U32: 0,
-	BIN_INDEX_ACTIVE_U32: 4,
-};
-const HEADER_BYTE_LENGTH = 8;
 
 const PAD = 4;
 

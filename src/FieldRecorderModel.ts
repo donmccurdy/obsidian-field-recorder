@@ -1,9 +1,9 @@
-import WaveformProcessorModule from "inline:./WaveformProcessor.js";
 import { type Signal, signal } from "@preact/signals-core";
 import type { App } from "obsidian";
 import type { FieldRecorderPluginSettings } from "./constants";
 import { Timer } from "./Timer";
 import { assert, concat, getDefaultFilename, getFileExtension } from "./utils";
+import WaveformProcessorModule from "./WaveformProcessor.worklet.js?inline";
 
 export class FieldRecorderModel {
 	app: App;

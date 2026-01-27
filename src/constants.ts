@@ -11,7 +11,7 @@ const KNOWN_MIME_TYPES = [
 	"audio/mp4",
 ];
 
-export const SUPPORTED_MIME_TYPES = (() => {
+export const SUPPORTED_MIME_TYPES = /* @__PURE__ */ (() => {
 	const supportedTypes: string[] = [];
 	for (const mimeType of KNOWN_MIME_TYPES) {
 		if (MediaRecorder.isTypeSupported(mimeType)) {
