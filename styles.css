@@ -20,6 +20,10 @@
 	min-height: 400px;
 }
 
+.fieldrec-section-settings {
+	overflow: auto;
+}
+
 .fieldrec-section-record > :not(:first-child) {
 	margin: var(--size-4-2) 0;
 }

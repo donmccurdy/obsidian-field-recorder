@@ -63,8 +63,6 @@ export class FieldRecorderModel {
 	async startMicrophone() {
 		const { settings } = this;
 
-		// TODO: Both getUserMedia and AudioContext take a sampleRate parameter.
-
 		this.stream = await navigator.mediaDevices.getUserMedia({
 			audio: {
 				deviceId: settings.inputDeviceId,
