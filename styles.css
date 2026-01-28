@@ -94,3 +94,13 @@
 	border: var(--input-border-width) solid var(--background-modifier-border);
 	border-radius: calc(min(var(--input-radius), var(--input-height) / 2));
 }
+
+/** Prevent long select inputs from overflowing layout. */
+.fieldrec-setting-item.-wide {
+	flex-direction: column;
+	align-items: flex-start;
+}
+.fieldrec-setting-item.-wide .setting-item-control,
+.fieldrec-setting-item.-wide .setting-item-control > select {
+	max-width: 100%;
+}

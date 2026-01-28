@@ -127,7 +127,10 @@ export class FieldRecorderView extends ItemView {
 			cls: ["fieldrec-section", "fieldrec-section-settings"],
 		});
 
-		new Setting(settingsSectionEl).setName("Audio settings").setHeading();
+		new Setting(settingsSectionEl)
+			.setName("Audio settings")
+			.setClass("fieldrec-setting-item")
+			.setHeading();
 
 		const supportedConstraints = model.supportedConstraints.peek();
 		const inputDevices = model.inputDevices.peek();
@@ -139,43 +142,54 @@ export class FieldRecorderView extends ItemView {
 			}),
 		);
 
-		new Setting(settingsSectionEl).setName("Input").addDropdown((dropdown) =>
-			dropdown
-				.addOptions(inputOptions)
-				.setValue(plugin.settings.inputDeviceId) // TODO: Prevent from syncing?
-				.onChange(async (value) => {
-					plugin.settings.inputDeviceId = value;
-					await plugin.saveSettings();
-				}),
-		);
+		new Setting(settingsSectionEl)
+			.setName("Input")
+			.setClass("fieldrec-setting-item")
+			.setClass("-wide")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(inputOptions)
+					.setValue(plugin.settings.inputDeviceId) // TODO: Prevent from syncing?
+					.onChange(async (value) => {
+						plugin.settings.inputDeviceId = value;
+						await plugin.saveSettings();
+					}),
+			);
 
-		new Setting(settingsSectionEl).setName("Quality").addDropdown((dropdown) =>
-			dropdown
-				.addOptions(SUPPORTED_BITRATES)
-				.setValue(String(plugin.settings.bitrate / 1000))
-				.onChange(async (value) => {
-					plugin.settings.bitrate = Number(value) * 1000;
-					await plugin.saveSettings();
-				}),
-		);
+		new Setting(settingsSectionEl)
+			.setName("Quality")
+			.setClass("fieldrec-setting-item")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(SUPPORTED_BITRATES)
+					.setValue(String(plugin.settings.bitrate / 1000))
+					.onChange(async (value) => {
+						plugin.settings.bitrate = Number(value) * 1000;
+						await plugin.saveSettings();
+					}),
+			);
 
-		new Setting(settingsSectionEl).setName("Format").addDropdown((dropdown) =>
-			dropdown
-				.addOptions(
-					Object.fromEntries(
-						SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, MIME_TYPE_TO_FORMAT[mimeType]!]),
-					),
-				)
-				.setValue(plugin.settings.mimeType)
-				.onChange(async (value) => {
-					plugin.settings.mimeType = value;
-					await plugin.saveSettings();
-				}),
-		);
+		new Setting(settingsSectionEl)
+			.setName("Format")
+			.setClass("fieldrec-setting-item")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(
+						Object.fromEntries(
+							SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, MIME_TYPE_TO_FORMAT[mimeType]!]),
+						),
+					)
+					.setValue(plugin.settings.mimeType)
+					.onChange(async (value) => {
+						plugin.settings.mimeType = value;
+						await plugin.saveSettings();
+					}),
+			);
 
 		const autoGainControlAvailable = supportedConstraints.autoGainControl === true;
 		new Setting(settingsSectionEl)
 			.setName("Auto gain control")
+			.setClass("fieldrec-setting-item")
 			.setDisabled(!autoGainControlAvailable)
 			.setDesc(
 				autoGainControlAvailable
@@ -192,22 +206,26 @@ export class FieldRecorderView extends ItemView {
 					});
 			});
 
-		new Setting(settingsSectionEl).setName("Gain").addSlider((slider) => {
-			slider
-				.setInstant(true)
-				.setLimits(-5, +5, 0.05)
-				.setDynamicTooltip()
-				.setValue(plugin.settings.gain)
-				.onChange(async (value) => {
-					plugin.settings.gain = value;
-					await plugin.saveSettings();
-				});
-		});
+		new Setting(settingsSectionEl)
+			.setName("Gain")
+			.setClass("fieldrec-setting-item")
+			.addSlider((slider) => {
+				slider
+					.setInstant(true)
+					.setLimits(-5, +5, 0.05)
+					.setDynamicTooltip()
+					.setValue(plugin.settings.gain)
+					.onChange(async (value) => {
+						plugin.settings.gain = value;
+						await plugin.saveSettings();
+					});
+			});
 
 		// TODO: Has no effect if voice isolation is on, and should be disabled.
 		const noiseSuppressionAvailable = supportedConstraints.noiseSuppression === true;
 		new Setting(settingsSectionEl)
 			.setName("Noise suppression")
+			.setClass("fieldrec-setting-item")
 			.setDisabled(!noiseSuppressionAvailable)
 			.setDesc(
 				noiseSuppressionAvailable ? "Removes background noise." : "Unavailable on current device.",
@@ -225,6 +243,7 @@ export class FieldRecorderView extends ItemView {
 		const voiceIsolationAvailable = supportedConstraints.voiceIsolation === true;
 		new Setting(settingsSectionEl)
 			.setName("Voice isolation")
+			.setClass("fieldrec-setting-item")
 			.setDisabled(!voiceIsolationAvailable)
 			.setDesc(
 				voiceIsolationAvailable
@@ -244,6 +263,7 @@ export class FieldRecorderView extends ItemView {
 		const echoCancellationAvailable = supportedConstraints.echoCancellation === true;
 		new Setting(settingsSectionEl)
 			.setName("Echo cancellation")
+			.setClass("fieldrec-setting-item")
 			.setDisabled(!echoCancellationAvailable)
 			.setDesc(
 				echoCancellationAvailable
