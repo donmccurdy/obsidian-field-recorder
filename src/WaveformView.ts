@@ -1,6 +1,6 @@
 import { Component } from "obsidian";
+import { BIN_BYTE_LENGTH, BinLayout, HEADER_BYTE_LENGTH, HeaderLayout } from "./constants-shared";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
-import { BIN_BYTE_LENGTH, BinLayout, HEADER_BYTE_LENGTH, HeaderLayout } from "./layout";
 import { formatDuration } from "./utils";
 
 const PAD = 4;

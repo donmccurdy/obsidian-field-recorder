@@ -6,7 +6,8 @@ import {
 	CLIP_LEVEL,
 	HEADER_BYTE_LENGTH,
 	HeaderLayout,
-} from "./layout";
+	type WaveformProcessorMessage,
+} from "./constants-shared";
 
 /**
  * Audio processor for measuring volume and detecting clipping. Module should
@@ -20,9 +21,8 @@ import {
 class WaveformProcessor extends AudioWorkletProcessor {
 	arrayBuffer = new SharedArrayBuffer(HEADER_BYTE_LENGTH + BIN_COUNT * BIN_BYTE_LENGTH);
 	view = new DataView(this.arrayBuffer);
-
-	// https://github.com/WebAudio/web-audio-api/issues/2413
 	startTimeMs = Date.now();
+	keepAlive = true;
 
 	constructor() {
 		super();
@@ -31,14 +31,18 @@ class WaveformProcessor extends AudioWorkletProcessor {
 	}
 
 	init() {
-		this.port.onmessage = (msg: { data?: { type?: string } }) => {
-			if (msg.data?.type === "worklet-init") {
-				this.port.postMessage({ type: "worklet-init", buffer: this.arrayBuffer });
+		this.port.onmessage = (request: WaveformProcessorMessage) => {
+			if (request.data.type === "worklet-load") {
+				const response = { type: "worklet-buffer", buffer: this.arrayBuffer };
+				this.port.postMessage(response as WaveformProcessorMessage["data"]);
+			}
+			if (request.data.type === "worklet-unload") {
+				this.keepAlive = false;
 			}
 		};
 	}
 
-	process(inputs: Float32Array[][], _outputs: Float32Array[][], _parameters: unknown) {
+	process(inputs: Float32Array[][], _outputs: Float32Array[][], _parameters: unknown): boolean {
 		const view = this.view;
 		const input = inputs[0]![0]!;
 		const inputLength = input.length;
@@ -70,7 +74,9 @@ class WaveformProcessor extends AudioWorkletProcessor {
 		view.setUint32(HeaderLayout.BIN_INDEX_ACTIVE_U32, binIndex, true);
 		view.setFloat32(byteOffset + BinLayout.VOLUME_F32, volume, true);
 		view.setUint8(byteOffset + BinLayout.CLIPPED_U8, clipped ? 1 : 0);
-		return true;
+
+		// See: https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor/process
+		return this.keepAlive;
 	}
 }
 

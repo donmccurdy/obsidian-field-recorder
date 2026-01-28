@@ -15,3 +15,8 @@ export const HeaderLayout = {
 	BIN_INDEX_ACTIVE_U32: 4,
 };
 export const HEADER_BYTE_LENGTH = 8;
+
+export type WaveformProcessorMessage =
+	| { data: { type: "worklet-load" } }
+	| { data: { type: "worklet-buffer"; buffer: SharedArrayBuffer } }
+	| { data: { type: "worklet-unload" } };

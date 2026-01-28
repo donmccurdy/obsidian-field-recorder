@@ -1,9 +1,29 @@
 import type { FieldRecorderPlugin } from "FieldRecorderPlugin";
 import { type Signal, signal } from "@preact/signals-core";
+import type { WaveformProcessorMessage } from "constants-shared";
 import type { FieldRecorderPluginSettings } from "./constants";
 import { Timer } from "./Timer";
 import { assert, concat } from "./utils";
 import WaveformProcessorModule from "./WaveformProcessor.worklet.js?inline";
+
+const MSG_WORKLET_LOAD: WaveformProcessorMessage["data"] = { type: "worklet-load" };
+
+// Reuse a singleton AudioContext across recording sessions, to avoid creating
+// many AudioWorklet instances 'should' be GC'd after their AudioContext closes,
+// and I'm using the 'worklet-unload' event to alter the process() return value,
+// but worklets aren't otherwise being cleaned up automatically.
+// See: https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor/process
+// TODO(cleanup): Test across browsers and consider filing a Chromium bug.
+let audioCtx: AudioContext | null = null;
+async function getAudioContext(): Promise<AudioContext> {
+	if (!audioCtx) {
+		audioCtx = new AudioContext({ sinkId: { type: "none" } });
+		const blob = new Blob([WaveformProcessorModule], { type: "application/javascript" });
+		const objectURL = URL.createObjectURL(blob);
+		await audioCtx.audioWorklet.addModule(objectURL);
+	}
+	return audioCtx;
+}
 
 export class FieldRecorderModel {
 	plugin: FieldRecorderPlugin;
@@ -75,22 +95,16 @@ export class FieldRecorderModel {
 			},
 		});
 
-		this.audioCtx = new AudioContext({ sinkId: { type: "none" } });
-
-		const blob = new Blob([WaveformProcessorModule], { type: "application/javascript" });
-		const objectURL = URL.createObjectURL(blob);
-		await this.audioCtx.audioWorklet.addModule(objectURL);
-
+		this.audioCtx = await getAudioContext();
 		this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
 		this.gainNode = this.audioCtx.createGain();
 		this.workletNode = new AudioWorkletNode(this.audioCtx, "waveform-processor");
 		this.destinationNode = this.audioCtx.createMediaStreamDestination();
 
-		this.workletNode.port.postMessage({ type: "worklet-init" });
-		this.workletNode.port.onmessage = (msg) => {
-			if ((msg.data as { type?: string })?.type === "worklet-init") {
-				const data = msg.data as { type: string; buffer: SharedArrayBuffer };
-				this.workletView = new DataView(data.buffer);
+		this.workletNode.port.postMessage(MSG_WORKLET_LOAD);
+		this.workletNode.port.onmessage = (msg: WaveformProcessorMessage) => {
+			if (msg.data.type === "worklet-buffer") {
+				this.workletView = new DataView(msg.data.buffer);
 			}
 		};
 
@@ -119,8 +133,11 @@ export class FieldRecorderModel {
 	stopMicrophone() {
 		assert(this.state.value === "idle");
 
+		// TODO: See getAudioContext().
+		// this.workletNode!.port.postMessage(MSG_WORKLET_UNLOAD);
+		// this.workletNode!.port.close();
+		// void this.audioCtx!.close();
 		this.stream!.getTracks().forEach((track) => void track.stop());
-		void this.audioCtx?.close();
 
 		this.recorder = null;
 		this.stream = null;
