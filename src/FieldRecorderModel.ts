@@ -8,6 +8,8 @@ import WaveformProcessorModule from "./WaveformProcessor.worklet.js?inline";
 
 const MSG_WORKLET_LOAD: WaveformProcessorMessage["data"] = { type: "worklet-load" };
 
+export type State = "off" | "idle" | "paused" | "recording";
+
 // Reuse a singleton AudioContext across recording sessions, to avoid creating
 // many AudioWorklet instances 'should' be GC'd after their AudioContext closes,
 // and I'm using the 'worklet-unload' event to alter the process() return value,
@@ -29,7 +31,7 @@ export class FieldRecorderModel {
 	plugin: FieldRecorderPlugin;
 
 	// TODO: Too many top-level properties!
-	state: Signal<"off" | "idle" | "paused" | "recording"> = signal("off");
+	state: Signal<State> = signal("off");
 	settings: FieldRecorderPluginSettings;
 	audioCtx: AudioContext | null = null;
 	sourceNode: MediaStreamAudioSourceNode | null = null;
@@ -120,7 +122,8 @@ export class FieldRecorderModel {
 
 		this.recorder.addEventListener("dataavailable", (event) => {
 			this.chunks.push(event.data.arrayBuffer());
-			if (this.recorder!.state === "inactive") {
+			// Use `event.target`, as `this.recorder` may already have been deleted.
+			if ((event.target as MediaRecorder).state === "inactive") {
 				void this._onRecordingEnd();
 			}
 		});

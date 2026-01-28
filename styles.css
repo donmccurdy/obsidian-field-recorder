@@ -102,5 +102,5 @@
 }
 .fieldrec-setting-item.-wide .setting-item-control,
 .fieldrec-setting-item.-wide .setting-item-control > select {
-	max-width: 100%;
+	width: 100%;
 }

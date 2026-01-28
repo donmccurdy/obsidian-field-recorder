@@ -17,6 +17,7 @@ import {
  * References:
  * - https://github.com/cwilso/volume-meter
  * - https://github.com/esonderegger/web-audio-peak-meter
+ * - https://stackoverflow.com/questions/44360301/web-audio-api-creating-a-peak-meter-with-analysernode
  */
 class WaveformProcessor extends AudioWorkletProcessor {
 	arrayBuffer = new SharedArrayBuffer(HEADER_BYTE_LENGTH + BIN_COUNT * BIN_BYTE_LENGTH);

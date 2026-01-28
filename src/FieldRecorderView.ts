@@ -44,6 +44,12 @@ export class FieldRecorderView extends ItemView {
 		// TODO: Need to update UI without a full redraw.
 		// this.register(this.model.inputDevices.subscribe(() => void this.onOpen()));
 		// this.register(this.model.supportedConstraints.subscribe(() => void this.onOpen()));
+
+		// Notify the plugin when the view is shown/hidden. I suspect Obsidian emits an event
+		// for this, but I haven't found one: "layout-change" isn't enough.
+		const observer = new IntersectionObserver(() => void this.plugin.onViewStateChange());
+		observer.observe(this.containerEl);
+		this.register(() => observer.disconnect());
 	}
 
 	protected async onOpen(): Promise<void> {

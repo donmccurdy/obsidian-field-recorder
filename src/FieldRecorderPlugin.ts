@@ -1,5 +1,5 @@
-import { FieldRecorderModel } from "FieldRecorderModel";
-import { effect } from "@preact/signals-core";
+import { FieldRecorderModel, type State } from "FieldRecorderModel";
+import { effect, signal } from "@preact/signals-core";
 import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
@@ -15,6 +15,9 @@ export class FieldRecorderPlugin extends Plugin {
 
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
+
+	isViewRunning = signal(false);
+	isViewOpen = signal(true);
 
 	async onload() {
 		await this.loadSettings();
@@ -33,12 +36,26 @@ export class FieldRecorderPlugin extends Plugin {
 			(leaf: WorkspaceLeaf) => new FieldRecorderView(leaf, { plugin: this, model: this.model }),
 		);
 
+		this.register(effect(() => this._updateMicIndicator(this.model.state.value)));
+
 		this.register(
 			effect(() => {
-				if (this.model.state.value === "recording") {
-					this._showRecordingIndicator();
-				} else {
-					this._hideRecordingIndicator();
+				const { isViewRunning, isViewOpen } = this;
+				const { state } = this.model;
+
+				// View has just opened or come into view. Start the mic.
+				if (isViewRunning.value && isViewOpen.value && state.value === "off") {
+					void this.model.startMicrophone();
+				}
+
+				// View is out of view, and recording is idle. Stop the mic.
+				if (isViewRunning.value && !isViewOpen.value && state.value === "idle") {
+					this.model.stopAll();
+				}
+
+				// View is not running, and necessarily not open. Stop the mic.
+				if (!isViewRunning.value && !isViewOpen.value && state.value !== "off") {
+					this.model.stopAll();
 				}
 			}),
 		);
@@ -52,13 +69,13 @@ export class FieldRecorderPlugin extends Plugin {
 		this.addCommand({
 			id: "open",
 			name: "Open",
-			callback: async () => this._activateView(),
+			callback: async () => this._openView(),
 		});
 
 		this.addCommand({
 			id: "close",
 			name: "Close",
-			callback: () => this._deactivateView(),
+			callback: () => this._closeView(),
 		});
 
 		this.addCommand({
@@ -105,33 +122,36 @@ export class FieldRecorderPlugin extends Plugin {
 		await this.model.updateSettings(this.settings);
 	}
 
+	private _isViewOpen(): boolean {
+		if (this.app.workspace.rightSplit.collapsed) {
+			return false;
+		}
+		return this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
+	}
+
 	private async _toggleView() {
-		if (this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0) {
-			await this._deactivateView();
+		if (this._isViewOpen()) {
+			await this._closeView();
 		} else {
-			await this._activateView();
+			await this._openView();
 		}
 	}
 
-	private async _activateView() {
+	private async _openView() {
+		if (this.app.workspace.rightSplit.collapsed) {
+			this.app.workspace.rightSplit.expand();
+		}
 		await this.app.workspace.ensureSideLeaf(VIEW_TYPE_FIELD_RECORDER, "right");
 	}
 
-	private async _deactivateView() {
+	private async _closeView() {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
 	}
 
 	async onViewStateChange() {
-		const state = this.model.state.peek();
-
-		const isViewActive = this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
-		this.ribbonIconEl!.toggleClass("is-active", isViewActive);
-
-		if (isViewActive && state === "off") {
-			await this.model.startMicrophone();
-		} else if (!isViewActive && state !== "off") {
-			this.model.stopAll();
-		}
+		this.isViewRunning.value =
+			this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
+		this.isViewOpen.value = this._isViewOpen();
 	}
 
 	async saveRecording(data: Uint8Array) {
@@ -152,16 +172,16 @@ export class FieldRecorderPlugin extends Plugin {
 		}
 	}
 
-	private _showRecordingIndicator() {
-		this.statusBarItemEl = this.addStatusBarItem();
-		const iconEl = this.statusBarItemEl.createEl("span");
-		iconEl.toggleClass("status-bar-item-icon", true);
-		iconEl.toggleClass("fieldrec-status-bar-icon", true);
-		setIcon(iconEl, "mic");
-	}
+	private _updateMicIndicator(state: State) {
+		this.ribbonIconEl!.toggleClass("is-active", state !== "off");
 
-	private _hideRecordingIndicator() {
-		if (this.statusBarItemEl) {
+		if (state === "recording") {
+			this.statusBarItemEl = this.addStatusBarItem();
+			const iconEl = this.statusBarItemEl.createEl("span");
+			iconEl.toggleClass("status-bar-item-icon", true);
+			iconEl.toggleClass("fieldrec-status-bar-icon", true);
+			setIcon(iconEl, "mic");
+		} else if (this.statusBarItemEl) {
 			this.statusBarItemEl.remove();
 			this.statusBarItemEl = null;
 		}
