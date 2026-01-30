@@ -1,4 +1,4 @@
-import { Component } from "obsidian";
+import { Component, Platform } from "obsidian";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 
 export const BinLayout = {
@@ -23,7 +23,9 @@ export class WaveformProcessor extends Component {
 	public binIndexCurrent = 0;
 
 	public clipLevel = 0.98;
-	public referenceLevelDb = -40;
+
+	// TODO: Better way to determine reference level?
+	public referenceLevelDb = Platform.isIosApp ? -60 : -40;
 
 	constructor(props: WaveformProcessorProps) {
 		super();
