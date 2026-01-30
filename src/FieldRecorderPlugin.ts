@@ -19,8 +19,8 @@ export class FieldRecorderPlugin extends Plugin {
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
 
-	isViewRunning = signal(false);
-	isViewOpen = signal(true);
+	viewsVisibleCount = signal(0);
+	viewsActiveCount = signal(0);
 
 	async onload() {
 		await this.loadSettings();
@@ -43,21 +43,22 @@ export class FieldRecorderPlugin extends Plugin {
 
 		this.register(
 			effect(() => {
-				const { isViewRunning, isViewOpen } = this;
-				const { state } = this.model;
+				const state = this.model.state.value;
+				const isViewActive = this.viewsActiveCount.value > 0;
+				const isViewVisible = this.viewsVisibleCount.value > 0;
 
 				// View has just opened or come into view. Start the mic.
-				if (isViewRunning.value && isViewOpen.value && state.value === "off") {
+				if (isViewActive && isViewVisible && state === "off") {
 					void this.model.startMicrophone();
 				}
 
 				// View is out of view, and recording is idle. Stop the mic.
-				if (isViewRunning.value && !isViewOpen.value && state.value === "idle") {
+				if (isViewActive && !isViewVisible && state === "idle") {
 					this.model.stopAll();
 				}
 
 				// View is not running, and necessarily not open. Stop the mic.
-				if (!isViewRunning.value && !isViewOpen.value && state.value !== "off") {
+				if (!isViewActive && !isViewVisible && state !== "off") {
 					this.model.stopAll();
 				}
 			}),
@@ -146,17 +147,8 @@ export class FieldRecorderPlugin extends Plugin {
 		await this.model.updateSettings(this.settings);
 	}
 
-	// TODO: Inline this into onViewStateChange().
-	private _isViewOpen(): boolean {
-		if (this.app.workspace.rightSplit.collapsed) {
-			return false;
-		}
-		// TODO: Check that at least one of these leaves is visible.
-		return this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
-	}
-
 	private async _toggleView() {
-		if (this._isViewOpen()) {
+		if (this.viewsVisibleCount.peek() > 0) {
 			await this._closeView();
 		} else {
 			await this._openView();
@@ -172,12 +164,6 @@ export class FieldRecorderPlugin extends Plugin {
 
 	private async _closeView() {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
-	}
-
-	async onViewStateChange() {
-		this.isViewRunning.value =
-			this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
-		this.isViewOpen.value = this._isViewOpen();
 	}
 
 	async saveRecording(data: Uint8Array) {

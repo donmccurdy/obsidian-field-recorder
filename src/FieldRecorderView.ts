@@ -45,11 +45,20 @@ export class FieldRecorderView extends ItemView {
 		// this.register(this.model.inputDevices.subscribe(() => void this.onOpen()));
 		// this.register(this.model.supportedConstraints.subscribe(() => void this.onOpen()));
 
-		// Notify the plugin when the view is shown/hidden. I suspect Obsidian emits an event
-		// for this, but I haven't found one: "layout-change" isn't enough.
-		const observer = new IntersectionObserver(() => void this.plugin.onViewStateChange());
+		// Notify plugin when view visibility changes. Affected by right split and tab changes,
+		// and I'mn ot sure if Obsidian's API has events for these.
+		const observer = new IntersectionObserver((entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				this.plugin.viewsVisibleCount.value++;
+			} else {
+				this.plugin.viewsVisibleCount.value--;
+			}
+		});
 		observer.observe(this.containerEl);
-		this.register(() => observer.disconnect());
+		this.register(() => {
+			this.plugin.viewsVisibleCount.value--;
+			observer.disconnect();
+		});
 	}
 
 	tick() {
@@ -273,7 +282,7 @@ export class FieldRecorderView extends ItemView {
 					}),
 			);
 
-		await this.plugin.onViewStateChange();
+		this.plugin.viewsActiveCount.value++;
 	}
 
 	async onClose(): Promise<void> {
@@ -282,6 +291,6 @@ export class FieldRecorderView extends ItemView {
 		if (this.waveformView) {
 			this.removeChild(this.waveformView);
 		}
-		await this.plugin.onViewStateChange();
+		this.plugin.viewsActiveCount.value--;
 	}
 }

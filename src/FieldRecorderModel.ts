@@ -10,7 +10,7 @@ export type State = "off" | "idle" | "paused" | "recording";
 export class FieldRecorderModel extends Component {
 	plugin: FieldRecorderPlugin;
 
-	// TODO: Too many top-level properties!
+	// TODO: Too many top-level properties! Wrap in AudioGraph.
 	state: Signal<State> = signal("off");
 	settings: FieldRecorderPluginSettings;
 	audioCtx: AudioContext | null = null;
