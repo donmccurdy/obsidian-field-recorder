@@ -1,13 +1,14 @@
 import { Component } from "obsidian";
-import { BIN_BYTE_LENGTH, BinLayout, HEADER_BYTE_LENGTH, HeaderLayout } from "./constants-shared";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 import { formatDuration } from "./utils";
+import type { WaveformProcessor } from "./WaveformProcessor";
 
 const PAD = 4;
 
 export type WaveformViewProps = {
 	canvasEl: HTMLCanvasElement;
 	model: FieldRecorderModel;
+	processor: WaveformProcessor;
 };
 
 type WaveformPalette = {
@@ -18,6 +19,7 @@ type WaveformPalette = {
 
 export class WaveformView extends Component {
 	model: FieldRecorderModel;
+	processor: WaveformProcessor;
 	canvasEl: HTMLCanvasElement;
 	ctx: CanvasRenderingContext2D;
 	palette: WaveformPalette;
@@ -25,20 +27,12 @@ export class WaveformView extends Component {
 	constructor(props: WaveformViewProps) {
 		super();
 		this.model = props.model;
+		this.processor = props.processor;
 		this.canvasEl = props.canvasEl;
 		this.ctx = props.canvasEl.getContext("2d")!;
 	}
 
 	onload() {
-		// Start animation loop.
-		let handle: number;
-		const animate = () => {
-			handle = requestAnimationFrame(animate);
-			this.render();
-		};
-		handle = requestAnimationFrame(animate);
-		this.register(() => cancelAnimationFrame(handle));
-
 		// Start resize observer.
 		const resizeObserver = new ResizeObserver(() => this.onResize());
 		resizeObserver.observe(this.canvasEl, { box: "content-box" });
@@ -47,8 +41,10 @@ export class WaveformView extends Component {
 	}
 
 	updatePalette() {
+		console.time("updatePalette");
 		// Component initializes before ancestors are in the DOM.
 		if (!document.body.contains(this.canvasEl)) {
+			console.timeEnd("updatePalette");
 			return;
 		}
 
@@ -58,9 +54,10 @@ export class WaveformView extends Component {
 			bgColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
 			clipColor: computedStyle.getPropertyValue("--color-red"),
 		};
+		console.timeEnd("updatePalette");
 	}
 
-	render() {
+	tick() {
 		const { model, canvasEl, ctx } = this;
 		const { width, height } = canvasEl;
 		const state = model.state.peek();
@@ -93,25 +90,20 @@ export class WaveformView extends Component {
 		}
 
 		// waveform
-		if (model.workletView) {
-			const binCount = model.workletView.getUint32(HeaderLayout.BIN_COUNT_U32, true);
-			const binIndexActive = model.workletView.getUint32(HeaderLayout.BIN_INDEX_ACTIVE_U32, true);
-			const binSpacing = Math.ceil((width - 8) / binCount);
-			const binWidth = Math.floor(binSpacing / 2);
-			for (let i = 0; i < binCount; i++) {
-				const binIndex =
-					binIndexActive - i >= 0 ? binIndexActive - i : binCount + binIndexActive - i;
-				const byteOffset = HEADER_BYTE_LENGTH + binIndex * BIN_BYTE_LENGTH;
-				const volume = model.workletView.getFloat32(byteOffset + BinLayout.VOLUME_F32, true);
-				const clipped = model.workletView.getUint8(byteOffset + BinLayout.CLIPPED_U8);
+		const { binCount } = this.processor;
+		const binSpacing = Math.ceil((width - 8) / binCount);
+		const binWidth = Math.floor(binSpacing / 2);
 
-				if (volume === 0) continue;
+		for (let i = 0; i < binCount; i++) {
+			const volume = this.processor.getBinVolume(i);
+			const clipped = this.processor.getBinClipped(i);
 
-				const x = width - i * binSpacing - PAD - binWidth;
-				const barHeight = Math.max((volume * height * 2) / 3, 4);
-				ctx.fillStyle = clipped ? palette.clipColor : palette.fgColor;
-				ctx.fillRect(x, height / 2 - barHeight / 2, binWidth, barHeight);
-			}
+			if (volume === 0) continue;
+
+			const x = width - i * binSpacing - PAD - binWidth;
+			const barHeight = Math.max((volume * height * 2) / 3, 4);
+			ctx.fillStyle = clipped ? palette.clipColor : palette.fgColor;
+			ctx.fillRect(x, height / 2 - barHeight / 2, binWidth, barHeight);
 		}
 	}
 

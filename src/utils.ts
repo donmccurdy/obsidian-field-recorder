@@ -56,3 +56,13 @@ export function formatDuration(ms: number): string {
 
 	return `${hh}:${mm}:${ss}.${cc}`;
 }
+
+export function frame(fn: () => void): () => void {
+	let handle: number;
+	const animate = () => {
+		handle = requestAnimationFrame(animate);
+		fn();
+	};
+	handle = requestAnimationFrame(animate);
+	return () => cancelAnimationFrame(handle);
+}

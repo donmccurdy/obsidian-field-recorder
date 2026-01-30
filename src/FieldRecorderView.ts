@@ -52,6 +52,10 @@ export class FieldRecorderView extends ItemView {
 		this.register(() => observer.disconnect());
 	}
 
+	tick() {
+		this.waveformView!.tick();
+	}
+
 	protected async onOpen(): Promise<void> {
 		const { plugin, model, containerEl } = this;
 
@@ -79,14 +83,11 @@ export class FieldRecorderView extends ItemView {
 		filenameEl.addEventListener("change", onFilenameChange);
 		this.formSubscriptions.push(() => filenameEl.removeEventListener("change", onFilenameChange));
 
-		const canvasEl = recordSectionEl.createEl("canvas", {
-			attr: {
-				width: 200,
-				height: 100,
-			},
-		});
+		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
 
-		this.waveformView = this.addChild(new WaveformView({ model, canvasEl }));
+		this.waveformView = this.addChild(
+			new WaveformView({ model, canvasEl, processor: plugin.processor }),
+		);
 
 		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
 
@@ -132,11 +133,6 @@ export class FieldRecorderView extends ItemView {
 		const settingsSectionEl = containerEl.createEl("section", {
 			cls: ["fieldrec-section", "fieldrec-section-settings"],
 		});
-
-		new Setting(settingsSectionEl)
-			.setName("Audio settings")
-			.setClass("fieldrec-setting-item")
-			.setHeading();
 
 		const supportedConstraints = model.supportedConstraints.peek();
 		const inputDevices = model.inputDevices.peek();

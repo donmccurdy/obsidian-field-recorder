@@ -19,7 +19,6 @@
 		"@types/node": "^16.11.6",
 		"esbuild": "0.25.5",
 		"eslint-plugin-obsidianmd": "0.1.9",
-		"find-cache-directory": "^6.0.0",
 		"globals": "14.0.0",
 		"jiti": "2.6.1",
 		"tslib": "2.4.0",

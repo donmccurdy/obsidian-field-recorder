@@ -1,33 +1,13 @@
 import type { FieldRecorderPlugin } from "FieldRecorderPlugin";
 import { type Signal, signal } from "@preact/signals-core";
-import type { WaveformProcessorMessage } from "constants-shared";
+import { Component } from "obsidian";
 import type { FieldRecorderPluginSettings } from "./constants";
 import { Timer } from "./Timer";
 import { assert, concat } from "./utils";
-import WaveformProcessorModule from "./WaveformProcessor.worklet.js?inline";
-
-const MSG_WORKLET_LOAD: WaveformProcessorMessage["data"] = { type: "worklet-load" };
 
 export type State = "off" | "idle" | "paused" | "recording";
 
-// Reuse a singleton AudioContext across recording sessions, to avoid creating
-// many AudioWorklet instances 'should' be GC'd after their AudioContext closes,
-// and I'm using the 'worklet-unload' event to alter the process() return value,
-// but worklets aren't otherwise being cleaned up automatically.
-// See: https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor/process
-// TODO(cleanup): Test across browsers and consider filing a Chromium bug.
-let audioCtx: AudioContext | null = null;
-async function getAudioContext(): Promise<AudioContext> {
-	if (!audioCtx) {
-		audioCtx = new AudioContext({ sinkId: { type: "none" } });
-		const blob = new Blob([WaveformProcessorModule], { type: "application/javascript" });
-		const objectURL = URL.createObjectURL(blob);
-		await audioCtx.audioWorklet.addModule(objectURL);
-	}
-	return audioCtx;
-}
-
-export class FieldRecorderModel {
+export class FieldRecorderModel extends Component {
 	plugin: FieldRecorderPlugin;
 
 	// TODO: Too many top-level properties!
@@ -36,8 +16,7 @@ export class FieldRecorderModel {
 	audioCtx: AudioContext | null = null;
 	sourceNode: MediaStreamAudioSourceNode | null = null;
 	gainNode: GainNode | null;
-	workletNode: AudioWorkletNode | null;
-	workletView: DataView | null;
+	analyserNode: AnalyserNode | null;
 	destinationNode: MediaStreamAudioDestinationNode | null = null;
 	stream: MediaStream | null = null;
 	recorder: MediaRecorder | null = null;
@@ -48,15 +27,16 @@ export class FieldRecorderModel {
 	subscriptions: (() => void)[] = [];
 
 	constructor(plugin: FieldRecorderPlugin, settings: FieldRecorderPluginSettings) {
+		super();
 		this.plugin = plugin;
 		this.settings = settings;
 	}
 
-	async onload() {
-		const devices = await navigator.mediaDevices.enumerateDevices();
-		this.inputDevices.value = devices.filter(({ kind }) => kind === "audioinput");
+	onload() {
+		// TODO: Doesn't belong here?
+		// const devices = await navigator.mediaDevices.enumerateDevices();
+		// this.inputDevices.value = devices.filter(({ kind }) => kind === "audioinput");
 		this.supportedConstraints.value = navigator.mediaDevices.getSupportedConstraints();
-
 		const onDeviceChange = () => {
 			this.supportedConstraints.value = navigator.mediaDevices.getSupportedConstraints();
 			navigator.mediaDevices
@@ -87,6 +67,10 @@ export class FieldRecorderModel {
 	async startMicrophone() {
 		const { settings } = this;
 
+		// TODO: On iOS we can't get the device list until after calling getUserMedia. Which,
+		// is frustrating, given we need to pass a deviceId _into_ getUserMedia. But OK.
+		// TODO: We can apply constraints to _tracks_, though? Also note support for deviceId
+		// selection requires both multiple devices, and support for the 'deviceId' constraint.
 		this.stream = await navigator.mediaDevices.getUserMedia({
 			audio: {
 				deviceId: settings.inputDeviceId,
@@ -97,24 +81,20 @@ export class FieldRecorderModel {
 			},
 		});
 
-		this.audioCtx = await getAudioContext();
+		this.audioCtx = new AudioContext({ sinkId: { type: "none" } });
 		this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
 		this.gainNode = this.audioCtx.createGain();
-		this.workletNode = new AudioWorkletNode(this.audioCtx, "waveform-processor");
+		this.analyserNode = this.audioCtx.createAnalyser();
 		this.destinationNode = this.audioCtx.createMediaStreamDestination();
 
-		this.workletNode.port.postMessage(MSG_WORKLET_LOAD);
-		this.workletNode.port.onmessage = (msg: WaveformProcessorMessage) => {
-			if (msg.data.type === "worklet-buffer") {
-				this.workletView = new DataView(msg.data.buffer);
-			}
-		};
-
+		// TODO: I'm not sure GainNode is working on iOS?
+		// https://bugs.webkit.org/show_bug.cgi?id=180696
 		this.sourceNode.connect(this.gainNode);
-		this.gainNode.connect(this.workletNode);
+		this.gainNode.connect(this.analyserNode);
 		this.gainNode.connect(this.destinationNode);
 
 		this.recorder = new MediaRecorder(this.destinationNode.stream, {
+			// TODO: Can bitrate here be set without first configuring the stream?
 			audioBitrateMode: settings.bitrateMode,
 			audioBitsPerSecond: settings.bitrate,
 			mimeType: settings.mimeType,
@@ -136,17 +116,14 @@ export class FieldRecorderModel {
 	stopMicrophone() {
 		assert(this.state.value === "idle");
 
-		// TODO: See getAudioContext().
-		// this.workletNode!.port.postMessage(MSG_WORKLET_UNLOAD);
-		// this.workletNode!.port.close();
-		// void this.audioCtx!.close();
+		void this.audioCtx!.close();
 		this.stream!.getTracks().forEach((track) => void track.stop());
 
 		this.recorder = null;
 		this.stream = null;
 		this.sourceNode = null;
 		this.gainNode = null;
-		this.workletNode = null;
+		this.analyserNode = null;
 		this.destinationNode = null;
 		this.audioCtx = null;
 		this.state.value = "off";

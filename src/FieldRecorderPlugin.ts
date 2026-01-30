@@ -7,10 +7,12 @@ import {
 	VIEW_TYPE_FIELD_RECORDER,
 } from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
-import { getDefaultFilename, getFileExtension } from "./utils";
+import { frame, getDefaultFilename, getFileExtension } from "./utils";
+import { WaveformProcessor } from "./WaveformProcessor";
 
 export class FieldRecorderPlugin extends Plugin {
 	model: FieldRecorderModel;
+	processor: WaveformProcessor;
 	settings: FieldRecorderPluginSettings;
 
 	ribbonIconEl: HTMLElement | null = null;
@@ -22,14 +24,14 @@ export class FieldRecorderPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.model = new FieldRecorderModel(this, this.settings);
-		await this.model.onload();
+		this.model = this.addChild(new FieldRecorderModel(this, this.settings));
+		this.processor = this.addChild(new WaveformProcessor(this));
 
-		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", async () =>
+		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", () =>
 			this._toggleView(),
 		);
 
-		this._registerCommands();
+		this.registerCommands();
 
 		this.registerView(
 			VIEW_TYPE_FIELD_RECORDER,
@@ -59,13 +61,27 @@ export class FieldRecorderPlugin extends Plugin {
 				}
 			}),
 		);
+
+		this.register(frame(() => this.tick()));
 	}
 
-	onunload() {
-		this.model.onunload();
+	tick() {
+		const { model, processor, app } = this;
+
+		if (model.state.peek() === "off") {
+			return;
+		}
+
+		processor.tick();
+
+		for (const leaf of app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER)) {
+			if (leaf.view instanceof FieldRecorderView) {
+				leaf.view.tick();
+			}
+		}
 	}
 
-	private _registerCommands() {
+	private registerCommands() {
 		this.addCommand({
 			id: "open",
 			name: "Open",
@@ -118,14 +134,17 @@ export class FieldRecorderPlugin extends Plugin {
 	}
 
 	async saveSettings() {
+		// TODO: Use signals.
 		await this.saveData(this.settings);
 		await this.model.updateSettings(this.settings);
 	}
 
+	// TODO: Inline this into onViewStateChange().
 	private _isViewOpen(): boolean {
 		if (this.app.workspace.rightSplit.collapsed) {
 			return false;
 		}
+		// TODO: Check that at least one of these leaves is visible.
 		return this.app.workspace.getLeavesOfType(VIEW_TYPE_FIELD_RECORDER).length > 0;
 	}
 
