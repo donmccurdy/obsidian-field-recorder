@@ -7,13 +7,14 @@ import {
 	VIEW_TYPE_FIELD_RECORDER,
 } from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
-import { frame, getDefaultFilename, getFileExtension } from "./utils";
+import { detectPalette, frame, getDefaultFilename, getFileExtension } from "./utils";
 import { WaveformProcessor } from "./WaveformProcessor";
 
 export class FieldRecorderPlugin extends Plugin {
 	model: FieldRecorderModel;
 	processor: WaveformProcessor;
 	settings: FieldRecorderPluginSettings;
+	palette = signal(detectPalette(document.body));
 
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
@@ -59,6 +60,12 @@ export class FieldRecorderPlugin extends Plugin {
 				if (!isViewRunning.value && !isViewOpen.value && state.value !== "off") {
 					this.model.stopAll();
 				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("css-change", () => {
+				this.palette.value = detectPalette(document.body);
 			}),
 		);
 

@@ -66,3 +66,18 @@ export function frame(fn: () => void): () => void {
 	handle = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(handle);
 }
+
+export type Palette = {
+	fgColor: string;
+	bgColor: string;
+	clipColor: string;
+};
+
+export function detectPalette(rootEl: HTMLElement): Palette {
+	const computedStyle = window.getComputedStyle(rootEl);
+	return {
+		fgColor: computedStyle.getPropertyValue("--interactive-accent"),
+		bgColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
+		clipColor: computedStyle.getPropertyValue("--color-red"),
+	};
+}

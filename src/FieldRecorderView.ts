@@ -58,6 +58,7 @@ export class FieldRecorderView extends ItemView {
 
 	protected async onOpen(): Promise<void> {
 		const { plugin, model, containerEl } = this;
+		const { palette, processor } = plugin;
 
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
@@ -85,9 +86,7 @@ export class FieldRecorderView extends ItemView {
 
 		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
 
-		this.waveformView = this.addChild(
-			new WaveformView({ model, canvasEl, processor: plugin.processor }),
-		);
+		this.waveformView = this.addChild(new WaveformView({ model, canvasEl, processor, palette }));
 
 		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
 

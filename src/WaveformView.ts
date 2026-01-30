@@ -1,6 +1,7 @@
+import type { Signal } from "@preact/signals-core";
 import { Component } from "obsidian";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
-import { formatDuration } from "./utils";
+import { formatDuration, type Palette } from "./utils";
 import type { WaveformProcessor } from "./WaveformProcessor";
 
 const PAD = 4;
@@ -9,12 +10,7 @@ export type WaveformViewProps = {
 	canvasEl: HTMLCanvasElement;
 	model: FieldRecorderModel;
 	processor: WaveformProcessor;
-};
-
-type WaveformPalette = {
-	fgColor: string;
-	bgColor: string;
-	clipColor: string;
+	palette: Signal<Palette>;
 };
 
 export class WaveformView extends Component {
@@ -22,12 +18,13 @@ export class WaveformView extends Component {
 	processor: WaveformProcessor;
 	canvasEl: HTMLCanvasElement;
 	ctx: CanvasRenderingContext2D;
-	palette: WaveformPalette;
+	palette: Signal<Palette>;
 
 	constructor(props: WaveformViewProps) {
 		super();
 		this.model = props.model;
 		this.processor = props.processor;
+		this.palette = props.palette;
 		this.canvasEl = props.canvasEl;
 		this.ctx = props.canvasEl.getContext("2d")!;
 	}
@@ -40,34 +37,12 @@ export class WaveformView extends Component {
 		this.onResize();
 	}
 
-	updatePalette() {
-		console.time("updatePalette");
-		// Component initializes before ancestors are in the DOM.
-		if (!document.body.contains(this.canvasEl)) {
-			console.timeEnd("updatePalette");
-			return;
-		}
-
-		const computedStyle = window.getComputedStyle(this.canvasEl);
-		this.palette = {
-			fgColor: computedStyle.getPropertyValue("--interactive-accent"),
-			bgColor: computedStyle.getPropertyValue("--background-modifier-form-field"),
-			clipColor: computedStyle.getPropertyValue("--color-red"),
-		};
-		console.timeEnd("updatePalette");
-	}
-
 	tick() {
 		const { model, canvasEl, ctx } = this;
 		const { width, height } = canvasEl;
 		const state = model.state.peek();
+		const palette = this.palette.peek();
 
-		// TODO: Make reactive, theme could change!
-		if (!this.palette) {
-			this.updatePalette();
-		}
-
-		const palette = this.palette;
 		if (!palette) {
 			return;
 		}
