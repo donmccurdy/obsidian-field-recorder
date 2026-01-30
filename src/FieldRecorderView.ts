@@ -77,12 +77,10 @@ export class FieldRecorderView extends ItemView {
 			},
 		});
 
-		const onFilenameChange = () => {
+		filenameEl.addEventListener("change", () => {
 			plugin.settings.filename = filenameEl.value;
 			void plugin.saveSettings();
-		};
-		filenameEl.addEventListener("change", onFilenameChange);
-		this.formSubscriptions.push(() => filenameEl.removeEventListener("change", onFilenameChange));
+		});
 
 		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
 
@@ -96,9 +94,7 @@ export class FieldRecorderView extends ItemView {
 		});
 		setIcon(recordBtnEl, "mic");
 
-		const onRecord = () => model.startRecording();
-		recordBtnEl.addEventListener("click", onRecord);
-		this.formSubscriptions.push(() => recordBtnEl.removeEventListener("click", onRecord));
+		recordBtnEl.addEventListener("click", () => model.startRecording());
 
 		const pauseBtnEl = btnRowEl.createEl("button", {
 			title: "Pause",
@@ -106,9 +102,7 @@ export class FieldRecorderView extends ItemView {
 			attr: { disabled: "" },
 		});
 		setIcon(pauseBtnEl, "pause");
-		const onPause = () => model.pauseRecording();
-		pauseBtnEl.addEventListener("click", onPause);
-		this.formSubscriptions.push(() => pauseBtnEl.removeEventListener("click", onPause));
+		pauseBtnEl.addEventListener("click", () => model.pauseRecording());
 
 		const stopBtnEl = btnRowEl.createEl("button", {
 			title: "Stop",
@@ -116,9 +110,7 @@ export class FieldRecorderView extends ItemView {
 			attr: { disabled: "" },
 		});
 		setIcon(stopBtnEl, "square");
-		const onStop = () => model.stopRecording();
-		stopBtnEl.addEventListener("click", onStop);
-		this.formSubscriptions.push(() => stopBtnEl.removeEventListener("click", onStop));
+		stopBtnEl.addEventListener("click", () => model.stopRecording());
 
 		this.formSubscriptions.push(
 			effect(() => {
