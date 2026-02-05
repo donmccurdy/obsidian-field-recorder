@@ -1,15 +1,11 @@
 import { WaveformView } from "WaveformView";
 import { effect } from "@preact/signals-core";
-import { ItemView, Setting, setIcon, type WorkspaceLeaf } from "obsidian";
+import { ItemView, type Setting, setIcon, type WorkspaceLeaf } from "obsidian";
 import { getDefaultFilename } from "utils";
-import {
-	MIME_TYPE_TO_FORMAT,
-	SUPPORTED_BITRATES,
-	SUPPORTED_MIME_TYPES,
-	VIEW_TYPE_FIELD_RECORDER,
-} from "./constants";
+import { VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
+import { createSetting, type SettingKey } from "./settings";
 
 type FieldRecorderViewProps = {
 	plugin: FieldRecorderPlugin;
@@ -19,6 +15,8 @@ type FieldRecorderViewProps = {
 export class FieldRecorderView extends ItemView {
 	private plugin: FieldRecorderPlugin;
 	private model: FieldRecorderModel;
+	// TODO: Not partial?
+	private settings: Partial<Record<SettingKey, Setting>> | null = null;
 	private waveformView: WaveformView | null = null;
 	private formSubscriptions: (() => void)[] = [];
 
@@ -41,12 +39,8 @@ export class FieldRecorderView extends ItemView {
 	}
 
 	onload() {
-		// TODO: Need to update UI without a full redraw.
-		// this.register(this.model.inputDevices.subscribe(() => void this.onOpen()));
-		// this.register(this.model.supportedConstraints.subscribe(() => void this.onOpen()));
-
 		// Notify plugin when view visibility changes. Affected by right split and tab changes,
-		// and I'mn ot sure if Obsidian's API has events for these.
+		// and I'm not sure if Obsidian's API has events for these.
 		const observer = new IntersectionObserver((entries) => {
 			if (entries.some((entry) => entry.isIntersecting)) {
 				this.plugin.viewsVisibleCount.value++;
@@ -54,8 +48,11 @@ export class FieldRecorderView extends ItemView {
 				this.plugin.viewsVisibleCount.value--;
 			}
 		});
+
 		observer.observe(this.containerEl);
+
 		this.register(() => {
+			// TODO(bug): Need to check that this view was previously visible.
 			this.plugin.viewsVisibleCount.value--;
 			observer.disconnect();
 		});
@@ -69,6 +66,8 @@ export class FieldRecorderView extends ItemView {
 		const { plugin, model, containerEl } = this;
 		const { palette, processor } = plugin;
 
+		const { inputSettings, graphSettings, outputSettings } = plugin.settings;
+
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
 
@@ -77,7 +76,7 @@ export class FieldRecorderView extends ItemView {
 		});
 
 		const filenameEl = recordSectionEl.createEl("input", {
-			value: plugin.settings.filename,
+			value: outputSettings.peek().filename,
 			placeholder: getDefaultFilename(),
 			cls: "fieldrec-input",
 			attr: {
@@ -87,8 +86,8 @@ export class FieldRecorderView extends ItemView {
 		});
 
 		filenameEl.addEventListener("change", () => {
-			plugin.settings.filename = filenameEl.value;
-			void plugin.saveSettings();
+			const filename = filenameEl.value;
+			outputSettings.value = { ...outputSettings.peek(), filename };
 		});
 
 		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
@@ -134,8 +133,8 @@ export class FieldRecorderView extends ItemView {
 			cls: ["fieldrec-section", "fieldrec-section-settings"],
 		});
 
-		const supportedConstraints = model.supportedConstraints.peek();
-		const inputDevices = model.inputDevices.peek();
+		const supportedConstraints = {} as Record<string, boolean>; // TODO: model.supportedConstraints.peek();
+		const inputDevices = [] as MediaDeviceInfo[]; // TODO: model.inputDevices.peek();
 
 		const inputOptions = Object.fromEntries(
 			inputDevices.map((device) => {
@@ -144,143 +143,18 @@ export class FieldRecorderView extends ItemView {
 			}),
 		);
 
-		new Setting(settingsSectionEl)
-			.setName("Input")
-			.setClass("fieldrec-setting-item")
-			.setClass("-wide")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOptions(inputOptions)
-					.setValue(plugin.settings.inputDeviceId) // TODO: Prevent from syncing?
-					.onChange(async (value) => {
-						plugin.settings.inputDeviceId = value;
-						await plugin.saveSettings();
-					}),
-			);
+		const el = settingsSectionEl;
 
-		new Setting(settingsSectionEl)
-			.setName("Quality")
-			.setClass("fieldrec-setting-item")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOptions(SUPPORTED_BITRATES)
-					.setValue(String(plugin.settings.bitrate / 1000))
-					.onChange(async (value) => {
-						plugin.settings.bitrate = Number(value) * 1000;
-						await plugin.saveSettings();
-					}),
-			);
-
-		new Setting(settingsSectionEl)
-			.setName("Format")
-			.setClass("fieldrec-setting-item")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOptions(
-						Object.fromEntries(
-							SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, MIME_TYPE_TO_FORMAT[mimeType]!]),
-						),
-					)
-					.setValue(plugin.settings.mimeType)
-					.onChange(async (value) => {
-						plugin.settings.mimeType = value;
-						await plugin.saveSettings();
-					}),
-			);
-
-		const autoGainControlAvailable = supportedConstraints.autoGainControl === true;
-		new Setting(settingsSectionEl)
-			.setName("Auto gain control")
-			.setClass("fieldrec-setting-item")
-			.setDisabled(!autoGainControlAvailable)
-			.setDesc(
-				autoGainControlAvailable
-					? "Manages gain to maintain a steady overall volume level."
-					: "Unavailable on current device.",
-			)
-			.addToggle((toggle) => {
-				toggle
-					.setDisabled(!autoGainControlAvailable)
-					.setValue(plugin.settings.autoGainControl)
-					.onChange(async (value) => {
-						plugin.settings.autoGainControl = value;
-						await plugin.saveSettings();
-					});
-			});
-
-		new Setting(settingsSectionEl)
-			.setName("Gain")
-			.setClass("fieldrec-setting-item")
-			.addSlider((slider) => {
-				slider
-					.setInstant(true)
-					.setLimits(-5, +5, 0.05)
-					.setDynamicTooltip()
-					.setValue(plugin.settings.gain)
-					.onChange(async (value) => {
-						plugin.settings.gain = value;
-						await plugin.saveSettings();
-					});
-			});
-
-		// TODO: Has no effect if voice isolation is on, and should be disabled.
-		const noiseSuppressionAvailable = supportedConstraints.noiseSuppression === true;
-		new Setting(settingsSectionEl)
-			.setName("Noise suppression")
-			.setClass("fieldrec-setting-item")
-			.setDisabled(!noiseSuppressionAvailable)
-			.setDesc(
-				noiseSuppressionAvailable ? "Removes background noise." : "Unavailable on current device.",
-			)
-			.addToggle((toggle) => {
-				toggle
-					.setDisabled(!noiseSuppressionAvailable)
-					.setValue(plugin.settings.noiseSuppression)
-					.onChange(async (value) => {
-						plugin.settings.noiseSuppression = value;
-						await plugin.saveSettings();
-					});
-			});
-
-		const voiceIsolationAvailable = supportedConstraints.voiceIsolation === true;
-		new Setting(settingsSectionEl)
-			.setName("Voice isolation")
-			.setClass("fieldrec-setting-item")
-			.setDisabled(!voiceIsolationAvailable)
-			.setDesc(
-				voiceIsolationAvailable
-					? "Removes non-vocal noise; stronger form of noise suppression."
-					: "Unavailable on current device.",
-			)
-			.addToggle((toggle) => {
-				toggle
-					.setDisabled(!voiceIsolationAvailable)
-					.setValue(plugin.settings.voiceIsolation)
-					.onChange(async (value) => {
-						plugin.settings.voiceIsolation = value;
-						await plugin.saveSettings();
-					});
-			});
-
-		const echoCancellationAvailable = supportedConstraints.echoCancellation === true;
-		new Setting(settingsSectionEl)
-			.setName("Echo cancellation")
-			.setClass("fieldrec-setting-item")
-			.setDisabled(!echoCancellationAvailable)
-			.setDesc(
-				echoCancellationAvailable
-					? "Reduces crosstalk between output and input devices."
-					: "Unavailable on current device.",
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setDisabled(!echoCancellationAvailable)
-					.setValue(plugin.settings.echoCancellation)
-					.onChange(async (value) => {
-						plugin.settings.echoCancellation = value;
-						await plugin.saveSettings();
-					}),
-			);
+		this.settings = {
+			deviceId: createSetting(el, "deviceId", inputSettings, { options: inputOptions }),
+			bitrate: createSetting(el, "bitrate", outputSettings),
+			mimeType: createSetting(el, "mimeType", outputSettings),
+			autoGainControl: createSetting(el, "autoGainControl", inputSettings),
+			gain: createSetting(el, "gain", graphSettings),
+			noiseSuppression: createSetting(el, "noiseSuppression", inputSettings),
+			voiceIsolation: createSetting(el, "voiceIsolation", inputSettings),
+			echoCancellation: createSetting(el, "echoCancellation", inputSettings),
+		};
 
 		this.plugin.viewsActiveCount.value++;
 	}

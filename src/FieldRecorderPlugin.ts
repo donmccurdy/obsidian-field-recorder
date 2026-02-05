@@ -1,19 +1,20 @@
 import { FieldRecorderModel, type State } from "FieldRecorderModel";
 import { effect, signal } from "@preact/signals-core";
 import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
-import {
-	DEFAULT_SETTINGS,
-	type FieldRecorderPluginSettings,
-	VIEW_TYPE_FIELD_RECORDER,
-} from "./constants";
+import { DEFAULT_SETTINGS, VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
+import type { PluginSettings, PluginSettingsStorage } from "./types";
 import { detectPalette, frame, getDefaultFilename, getFileExtension } from "./utils";
 import { WaveformProcessor } from "./WaveformProcessor";
 
 export class FieldRecorderPlugin extends Plugin {
 	model: FieldRecorderModel;
 	processor: WaveformProcessor;
-	settings: FieldRecorderPluginSettings;
+	settings: PluginSettings = {
+		inputSettings: signal(DEFAULT_SETTINGS.inputSettings),
+		graphSettings: signal(DEFAULT_SETTINGS.graphSettings),
+		outputSettings: signal(DEFAULT_SETTINGS.outputSettings),
+	};
 	palette = signal(detectPalette(document.body));
 
 	ribbonIconEl: HTMLElement | null = null;
@@ -61,6 +62,17 @@ export class FieldRecorderPlugin extends Plugin {
 				if (!isViewActive && !isViewVisible && state !== "off") {
 					this.model.stopAll();
 				}
+			}),
+		);
+
+		// TODO: Keep per-device preferences in local storage, nothing in synced plugin data.
+		this.register(
+			effect(() => {
+				void this.saveData({
+					inputSettings: this.settings.inputSettings.value,
+					graphSettings: this.settings.graphSettings.value,
+					outputSettings: this.settings.outputSettings.value,
+				} satisfies PluginSettingsStorage);
 			}),
 		);
 
@@ -134,17 +146,22 @@ export class FieldRecorderPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<FieldRecorderPluginSettings>,
-		);
-	}
+		const saved = (await this.loadData()) as Partial<typeof DEFAULT_SETTINGS>;
 
-	async saveSettings() {
-		// TODO: Use signals.
-		await this.saveData(this.settings);
-		await this.model.updateSettings(this.settings);
+		this.settings.inputSettings.value = {
+			...DEFAULT_SETTINGS.inputSettings,
+			...saved.inputSettings,
+		};
+
+		this.settings.graphSettings.value = {
+			...DEFAULT_SETTINGS.graphSettings,
+			...saved.graphSettings,
+		};
+
+		this.settings.outputSettings.value = {
+			...DEFAULT_SETTINGS.outputSettings,
+			...saved.outputSettings,
+		};
 	}
 
 	private async _toggleView() {
@@ -168,9 +185,10 @@ export class FieldRecorderPlugin extends Plugin {
 
 	async saveRecording(data: Uint8Array) {
 		const { workspace, vault, fileManager } = this.app;
+		const outputSettings = this.settings.outputSettings.peek();
 
-		const basename = this.settings.filename || getDefaultFilename();
-		const filename = `${basename}.${getFileExtension(this.settings.mimeType)}`;
+		const basename = outputSettings.filename || getDefaultFilename();
+		const filename = `${basename}.${getFileExtension(outputSettings.mimeType)}`;
 		const path = await fileManager.getAvailablePathForAttachment(filename);
 		const file = await vault.createBinary(path, data);
 

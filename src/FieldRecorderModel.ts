@@ -1,103 +1,53 @@
-import type { FieldRecorderPlugin } from "FieldRecorderPlugin";
+import { FieldRecorderAudioGraph } from "FieldRecorderAudioGraph";
 import { type Signal, signal } from "@preact/signals-core";
 import { Component } from "obsidian";
-import type { FieldRecorderPluginSettings } from "./constants";
+import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
 import { Timer } from "./Timer";
+import type { PluginSettings } from "./types";
 import { assert, concat } from "./utils";
 
 export type State = "off" | "idle" | "paused" | "recording";
 
 export class FieldRecorderModel extends Component {
-	plugin: FieldRecorderPlugin;
+	public readonly state = signal<State>("off");
+	public readonly timer = new Timer();
+	public readonly inputDevices: Signal<MediaDeviceInfo[]> = signal([]);
+	public readonly settings: PluginSettings;
 
-	// TODO: Too many top-level properties! Wrap in AudioGraph.
-	state: Signal<State> = signal("off");
-	settings: FieldRecorderPluginSettings;
-	audioCtx: AudioContext | null = null;
-	sourceNode: MediaStreamAudioSourceNode | null = null;
-	gainNode: GainNode | null;
-	analyserNode: AnalyserNode | null;
-	destinationNode: MediaStreamAudioDestinationNode | null = null;
-	stream: MediaStream | null = null;
-	recorder: MediaRecorder | null = null;
-	timer = new Timer();
-	inputDevices: Signal<MediaDeviceInfo[]> = signal([]);
-	supportedConstraints: Signal<MediaTrackSupportedConstraints> = signal({});
-	chunks: Promise<ArrayBuffer>[] = [];
-	subscriptions: (() => void)[] = [];
+	public graph: FieldRecorderAudioGraph | null = null;
+	public recorder: MediaRecorder | null = null;
 
-	constructor(plugin: FieldRecorderPlugin, settings: FieldRecorderPluginSettings) {
+	private plugin: FieldRecorderPlugin;
+	private chunks: Promise<ArrayBuffer>[] = [];
+	private subscriptions: (() => void)[] = [];
+
+	constructor(plugin: FieldRecorderPlugin, settings: PluginSettings) {
 		super();
 		this.plugin = plugin;
 		this.settings = settings;
 	}
 
 	onload() {
-		// TODO: Doesn't belong here?
-		// const devices = await navigator.mediaDevices.enumerateDevices();
-		// this.inputDevices.value = devices.filter(({ kind }) => kind === "audioinput");
-		this.supportedConstraints.value = navigator.mediaDevices.getSupportedConstraints();
-		const onDeviceChange = () => {
-			this.supportedConstraints.value = navigator.mediaDevices.getSupportedConstraints();
-			navigator.mediaDevices
-				.enumerateDevices()
-				.then((devices) => {
-					this.inputDevices.value = devices.filter(({ kind }) => kind === "audioinput");
-				})
-				.catch(console.error);
-		};
-		navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
-		this.subscriptions.push(() =>
-			navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange),
-		);
-	}
-
-	async updateSettings(settings: FieldRecorderPluginSettings) {
-		this.settings = settings;
-
-		const state = this.state.peek();
-		if (state === "idle") {
-			this.stopMicrophone();
-			await this.startMicrophone();
-		} else if (state !== "off") {
-			this._updateAudioNodes();
-		}
+		// TODO: Rewrite device and capability detection:
+		// 	1. enumerate kind="audioinput" devices, select preferred device or default
+		//  2. call getUserMedia with selected device and local per-device settings (if any)
+		//  3. after stream starts, enumerate devices again, selecting preferred device if we couldn't before
+		//  4. compare device.getCapabilities() to local settings, update stream tracks and UI state
+		//  5. if user changes settings, save to local per-device storage
+		//  6. listen for 'devicechange' events and go to (4)
+		//
+		// TODO: Unsure whether this belongs in the Model, though?
 	}
 
 	async startMicrophone() {
-		const { settings } = this;
+		this.graph = this.addChild(await FieldRecorderAudioGraph.createGraph(this.settings));
 
-		// TODO: On iOS we can't get the device list until after calling getUserMedia. Which,
-		// is frustrating, given we need to pass a deviceId _into_ getUserMedia. But OK.
-		// TODO: We can apply constraints to _tracks_, though? Also note support for deviceId
-		// selection requires both multiple devices, and support for the 'deviceId' constraint.
-		this.stream = await navigator.mediaDevices.getUserMedia({
-			audio: {
-				deviceId: settings.inputDeviceId,
-				autoGainControl: settings.autoGainControl,
-				noiseSuppression: settings.noiseSuppression,
-				echoCancellation: settings.echoCancellation,
-				voiceIsolation: settings.voiceIsolation,
-			},
-		});
-
-		this.audioCtx = new AudioContext({ sinkId: { type: "none" } });
-		this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
-		this.gainNode = this.audioCtx.createGain();
-		this.analyserNode = this.audioCtx.createAnalyser();
-		this.destinationNode = this.audioCtx.createMediaStreamDestination();
-
-		// TODO: I'm not sure GainNode is working on iOS?
-		// https://bugs.webkit.org/show_bug.cgi?id=180696
-		this.sourceNode.connect(this.gainNode);
-		this.gainNode.connect(this.analyserNode);
-		this.gainNode.connect(this.destinationNode);
-
-		this.recorder = new MediaRecorder(this.destinationNode.stream, {
-			// TODO: Can bitrate here be set without first configuring the stream?
-			audioBitrateMode: settings.bitrateMode,
-			audioBitsPerSecond: settings.bitrate,
-			mimeType: settings.mimeType,
+		// TODO: How does bitrate on the stream affect MediaRecorder quality?
+		const outputSettings = this.settings.outputSettings.peek();
+		this.recorder = new MediaRecorder(this.graph.destination.stream, {
+			audioBitsPerSecond: outputSettings.bitrate,
+			audioBitrateMode: outputSettings.bitrateMode,
+			mimeType: outputSettings.mimeType,
 		});
 
 		this.recorder.addEventListener("dataavailable", (event) => {
@@ -109,23 +59,12 @@ export class FieldRecorderModel extends Component {
 		});
 
 		this.state.value = "idle";
-
-		this._updateAudioNodes();
 	}
 
 	stopMicrophone() {
 		assert(this.state.value === "idle");
-
-		void this.audioCtx!.close();
-		this.stream!.getTracks().forEach((track) => void track.stop());
-
-		this.recorder = null;
-		this.stream = null;
-		this.sourceNode = null;
-		this.gainNode = null;
-		this.analyserNode = null;
-		this.destinationNode = null;
-		this.audioCtx = null;
+		this.removeChild(this.graph!);
+		this.graph = null;
 		this.state.value = "off";
 	}
 
@@ -167,15 +106,6 @@ export class FieldRecorderModel extends Component {
 			this.stopMicrophone();
 		} else if (state === "idle") {
 			this.stopMicrophone();
-		}
-	}
-
-	private _updateAudioNodes() {
-		const { settings } = this;
-		if (settings.autoGainControl) {
-			this.gainNode!.gain.value = 1.0;
-		} else {
-			this.gainNode!.gain.value = 2 ** settings.gain;
 		}
 	}
 

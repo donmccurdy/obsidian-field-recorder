@@ -13,7 +13,6 @@ export type WaveformProcessorProps = {
 
 export class WaveformProcessor extends Component {
 	private model: FieldRecorderModel;
-	private input: Float32Array | null = null;
 	private output: DataView<ArrayBuffer> | null = null;
 	private startTimeMs = Date.now();
 
@@ -77,22 +76,16 @@ export class WaveformProcessor extends Component {
 			return;
 		}
 
-		const analyserNode = this.model.analyserNode!;
+		const input = this.model.graph!.getFloatTimeDomainData();
 
-		let input = this.input;
-		if (!input || input.length !== analyserNode.fftSize) {
-			this.input = input = new Float32Array(analyserNode.fftSize);
-		}
-
-		analyserNode.getFloatTimeDomainData(input);
-
+		// TODO: Simplify and just have multiple arrays.
 		let binVolume = output.getFloat32(byteOffset + BinLayout.VOLUME_F32, true);
 		let clipped = output.getUint8(byteOffset + BinLayout.CLIPPED_U8) === 1;
 		let peakInstantPower = 0;
 
 		for (let i = 0; i < input.length; i++) {
-			peakInstantPower = Math.max(input[i]! ** 2, peakInstantPower);
-			if (Math.abs(input[i]!) > 1) {
+			peakInstantPower = Math.max(input[i] ** 2, peakInstantPower);
+			if (Math.abs(input[i]) > 1) {
 				clipped = true;
 			}
 		}
