@@ -138,8 +138,7 @@ export class FieldRecorderView extends ItemView {
 		const { plugin, model, containerEl } = this;
 		const { palette, processor } = plugin;
 
-		const resolved = model.resolvedSettings;
-		const preferred = model.preferredSettings;
+		const { inputSettings, graphSettings, outputSettings } = model.settings;
 
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
@@ -149,7 +148,7 @@ export class FieldRecorderView extends ItemView {
 		});
 
 		const filenameEl = recordSectionEl.createEl("input", {
-			value: preferred.outputSettings.peek().filename,
+			value: outputSettings.peek().filename,
 			placeholder: getDefaultFilename(),
 			cls: "fieldrec-input",
 			attr: {
@@ -160,7 +159,7 @@ export class FieldRecorderView extends ItemView {
 
 		filenameEl.addEventListener("change", () => {
 			const filename = filenameEl.value;
-			preferred.outputSettings.value = { ...preferred.outputSettings.peek(), filename };
+			outputSettings.value = { ...outputSettings.peek(), filename };
 		});
 
 		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
@@ -208,46 +207,16 @@ export class FieldRecorderView extends ItemView {
 
 		const el = settingsSectionEl;
 
-		this.ui.inputSettings.deviceId = createSetting(el, "deviceId", {
-			signalIn: resolved.inputSettings,
-			signalOut: preferred.inputSettings,
+		this.ui.inputSettings.deviceId = createSetting(el, "deviceId", inputSettings, {
 			options: this.inputOptions.peek(),
 		});
-
-		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", {
-			signalIn: resolved.outputSettings,
-			signalOut: preferred.outputSettings,
-		});
-
-		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", {
-			signalIn: resolved.outputSettings,
-			signalOut: preferred.outputSettings,
-		});
-
-		this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", {
-			signalIn: resolved.inputSettings,
-			signalOut: preferred.inputSettings,
-		});
-
-		this.ui.graphSettings.gain = createSetting(el, "gain", {
-			signalIn: resolved.graphSettings,
-			signalOut: preferred.graphSettings,
-		});
-
-		this.ui.inputSettings.noiseSuppression = createSetting(el, "noiseSuppression", {
-			signalIn: resolved.inputSettings,
-			signalOut: preferred.inputSettings,
-		});
-
-		this.ui.inputSettings.voiceIsolation = createSetting(el, "voiceIsolation", {
-			signalIn: resolved.inputSettings,
-			signalOut: preferred.inputSettings,
-		});
-
-		this.ui.inputSettings.echoCancellation = createSetting(el, "echoCancellation", {
-			signalIn: resolved.inputSettings,
-			signalOut: preferred.inputSettings,
-		});
+		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", outputSettings);
+		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", outputSettings);
+		this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", inputSettings);
+		this.ui.graphSettings.gain = createSetting(el, "gain", graphSettings);
+		this.ui.inputSettings.noiseSuppression = createSetting(el, "noiseSuppression", inputSettings);
+		this.ui.inputSettings.voiceIsolation = createSetting(el, "voiceIsolation", inputSettings);
+		this.ui.inputSettings.echoCancellation = createSetting(el, "echoCancellation", inputSettings);
 
 		this.plugin.viewsActiveCount.value++;
 	}

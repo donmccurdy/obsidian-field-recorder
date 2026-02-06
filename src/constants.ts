@@ -1,11 +1,16 @@
 import type {
 	BitrateMode,
 	ContentHint,
+	GraphSettingKey,
 	GraphSettings,
+	InputSettingKey,
 	InputSettings,
+	OutputSettingKey,
 	OutputSettings,
 	PluginSettingsStorage,
 } from "./types";
+
+export const LOCAL_STORAGE_KEY = "field-recorder:settings";
 
 export const VIEW_TYPE_FIELD_RECORDER = "field-recorder-view";
 
@@ -47,11 +52,11 @@ export const MIME_TYPE_TO_FORMAT: Record<string, string> = {
 };
 
 export const SUPPORTED_BITRATES: Record<string, string> = {
-	"32": "32 kb/s", // lowest
-	"96": "96 kb/s", // low
-	"128": "128 kb/s", // medium-low
-	"160": "160 kb/s", // medium
-	"192": "192 kb/s", // medium-high
+	"32000": "32 kb/s", // lowest
+	"96000": "96 kb/s", // low
+	"128000": "128 kb/s", // medium-low
+	"160000": "160 kb/s", // medium
+	"192000": "192 kb/s", // medium-high
 	// "256": "256 kb/s", // high
 	// "320": "320 kb/s", // highest
 };
@@ -65,16 +70,16 @@ export const INPUT_SETTING_KEYS = [
 	"sampleRate",
 	"sampleSize",
 	"voiceIsolation",
-] satisfies (keyof InputSettings)[];
+] satisfies InputSettingKey[];
 
-export const GRAPH_SETTING_KEYS = ["gain"] satisfies (keyof GraphSettings)[];
+export const GRAPH_SETTING_KEYS = ["gain"] satisfies GraphSettingKey[];
 
 export const OUTPUT_SETTING_KEYS = [
 	"filename",
 	"mimeType",
 	"bitrate",
 	"bitrateMode",
-] satisfies (keyof OutputSettings)[];
+] satisfies OutputSettingKey[];
 
 export const DEFAULT_SETTINGS = {
 	inputSettings: {
@@ -87,9 +92,9 @@ export const DEFAULT_SETTINGS = {
 		voiceIsolation: false,
 		contentHint: "" as ContentHint,
 	} satisfies InputSettings,
-	graphSettings: {
-		gain: 0,
-	} satisfies GraphSettings,
+
+	graphSettings: { gain: 0 } satisfies GraphSettings,
+
 	outputSettings: {
 		filename: "",
 		mimeType: SUPPORTED_MIME_TYPES.includes("audio/mp4") ? "audio/mp4" : SUPPORTED_MIME_TYPES[0],

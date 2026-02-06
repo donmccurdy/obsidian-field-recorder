@@ -1,5 +1,7 @@
 import type { Signal } from "@preact/signals-core";
 
+export type State = "off" | "idle" | "paused" | "recording";
+
 export type BitrateMode = "variable" | "constant";
 export type ContentHint = "" | "speech" | "speech-recognition" | "music";
 

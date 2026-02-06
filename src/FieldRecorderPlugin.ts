@@ -1,10 +1,10 @@
-import { FieldRecorderModel, type State } from "FieldRecorderModel";
+import { FieldRecorderModel } from "FieldRecorderModel";
 import { effect, signal } from "@preact/signals-core";
 import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import { AudioProcessor } from "./AudioProcessor";
-import { DEFAULT_SETTINGS, VIEW_TYPE_FIELD_RECORDER } from "./constants";
+import { DEFAULT_SETTINGS, LOCAL_STORAGE_KEY, VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
-import type { PluginSettings, PluginSettingsStorage } from "./types";
+import type { PluginSettings, PluginSettingsStorage, State } from "./types";
 import { detectPalette, frame, getDefaultFilename, getFileExtension } from "./utils";
 
 export class FieldRecorderPlugin extends Plugin {
@@ -19,9 +19,7 @@ export class FieldRecorderPlugin extends Plugin {
 	viewsActiveCount = signal(0);
 
 	async onload() {
-		const settings = await this.loadPreferredSettings();
-
-		this.model = this.addChild(new FieldRecorderModel(this, settings));
+		this.model = this.addChild(new FieldRecorderModel(this, this.loadSettings()));
 		this.processor = this.addChild(new AudioProcessor(this));
 
 		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", () =>
@@ -62,12 +60,12 @@ export class FieldRecorderPlugin extends Plugin {
 
 		this.register(
 			effect(() => {
-				const settings = this.model.preferredSettings;
-				void this.saveData({
+				const settings = this.model.settings;
+				this.saveSettings({
 					inputSettings: settings.inputSettings.value,
 					graphSettings: settings.graphSettings.value,
 					outputSettings: settings.outputSettings.value,
-				} satisfies PluginSettingsStorage);
+				});
 			}),
 		);
 
@@ -140,23 +138,32 @@ export class FieldRecorderPlugin extends Plugin {
 		});
 	}
 
-	async loadPreferredSettings(): Promise<PluginSettings> {
-		const saved = (await this.loadData()) as Partial<typeof DEFAULT_SETTINGS>;
+	saveSettings(settings: PluginSettingsStorage): void {
+		this.app.saveLocalStorage(LOCAL_STORAGE_KEY, settings);
+	}
+
+	loadSettings(): PluginSettings {
+		type Result = Partial<PluginSettingsStorage> | null;
+		const saved = this.app.loadLocalStorage(LOCAL_STORAGE_KEY) as Result;
 
 		return {
 			inputSettings: signal({
 				...DEFAULT_SETTINGS.inputSettings,
-				...saved.inputSettings,
+				...saved?.inputSettings,
 			}),
 			graphSettings: signal({
 				...DEFAULT_SETTINGS.graphSettings,
-				...saved.graphSettings,
+				...saved?.graphSettings,
 			}),
 			outputSettings: signal({
 				...DEFAULT_SETTINGS.outputSettings,
-				...saved.outputSettings,
+				...saved?.outputSettings,
 			}),
 		};
+	}
+
+	clearSettings(): void {
+		this.app.saveLocalStorage(LOCAL_STORAGE_KEY, null);
 	}
 
 	private async _toggleView() {
@@ -181,7 +188,7 @@ export class FieldRecorderPlugin extends Plugin {
 	async saveRecording(data: Uint8Array) {
 		const { workspace, vault, fileManager } = this.app;
 
-		const outputSettings = this.model.resolvedSettings.outputSettings.peek();
+		const outputSettings = this.model.settings.outputSettings.peek();
 		const basename = outputSettings.filename || getDefaultFilename();
 		const filename = `${basename}.${getFileExtension(outputSettings.mimeType)}`;
 		const path = await fileManager.getAvailablePathForAttachment(filename);

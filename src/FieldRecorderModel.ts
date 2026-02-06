@@ -4,26 +4,13 @@ import { AudioGraph } from "./AudioGraph";
 import { DEFAULT_SETTINGS, INPUT_SETTING_KEYS } from "./constants";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
 import { Timer } from "./Timer";
-import type { InputSettingKey, PluginSettings, PluginSettingsDisabled } from "./types";
+import type { InputSettingKey, PluginSettings, PluginSettingsDisabled, State } from "./types";
 import { assert, concat } from "./utils";
-
-export type State = "off" | "idle" | "paused" | "recording";
-
-// const INPUT_SETTINGS_ENABLED = Object.fromEntries(
-// 	INPUT_SETTING_KEYS.map((key) => [key, false]),
-// ) as Record<InputSettingKey, boolean>;
 
 const INPUT_SETTINGS_DISABLED = Object.fromEntries(
 	INPUT_SETTING_KEYS.map((key) => [key, true]),
 ) as Record<InputSettingKey, boolean>;
 
-// TODO: Rewrite device and capability detection:
-// 	1. enumerate kind="audioinput" devices, select preferred device or default
-//  2. call getUserMedia with selected device and local per-device settings (if any)
-//  3. after stream starts, enumerate devices again, selecting preferred device if we couldn't before
-//  4. compare device.getCapabilities() to local settings, update stream tracks and UI state
-//  5. if user changes settings, save to local per-device storage
-//  6. listen for 'devicechange' events and go to (4)
 export class FieldRecorderModel extends Component {
 	public readonly state = signal<State>("off");
 	public readonly timer = new Timer();
@@ -41,10 +28,7 @@ export class FieldRecorderModel extends Component {
 	public readonly activeInput: Signal<InputDeviceInfo | null>;
 
 	/** User's preferred settings. */
-	public readonly preferredSettings: PluginSettings;
-
-	/** Device's settings, based on user preferences and device capabilities. */
-	public readonly resolvedSettings: PluginSettings;
+	public readonly settings: PluginSettings;
 
 	/**
 	 * Settings that cannot currently be changed, either due to the selected
@@ -64,24 +48,7 @@ export class FieldRecorderModel extends Component {
 
 		this.plugin = plugin;
 
-		this.preferredSettings = settings;
-
-		this.resolvedSettings = {} as unknown as PluginSettings;
-
-		this.resolvedSettings.inputSettings = computed(() => {
-			const state = this.state.value;
-			const preferred = settings.inputSettings.value;
-			const resolved = this.inputTrackSettings.value[0];
-			return { ...preferred, ...(state !== "off" && resolved) };
-		});
-
-		this.resolvedSettings.graphSettings = computed(() => {
-			const autoGainControl = settings.inputSettings.value.autoGainControl;
-			const preferred = settings.graphSettings.value;
-			return { ...preferred, gain: autoGainControl ? 0.0 : preferred.gain };
-		});
-
-		this.resolvedSettings.outputSettings = computed(() => ({ ...settings.outputSettings.value }));
+		this.settings = settings;
 
 		this.disabledSettings = {
 			inputSettings: computed(() => {
@@ -111,7 +78,7 @@ export class FieldRecorderModel extends Component {
 
 			graphSettings: computed(() => {
 				const state = this.state.value;
-				const autoGainControl = this.resolvedSettings.inputSettings.value.autoGainControl;
+				const autoGainControl = this.settings.inputSettings.value.autoGainControl;
 				return { gain: state === "off" || autoGainControl };
 			}),
 
@@ -128,7 +95,7 @@ export class FieldRecorderModel extends Component {
 
 		this.activeInput = computed(() => {
 			const inputDevices = this.inputDevices.value;
-			const preferredDeviceId = this.preferredSettings.inputSettings.value.deviceId;
+			const preferredDeviceId = this.settings.inputSettings.value.deviceId;
 			for (const device of inputDevices) {
 				if (device.deviceId === preferredDeviceId) {
 					return device;
@@ -169,24 +136,13 @@ export class FieldRecorderModel extends Component {
 			}),
 		);
 
-		// this.register(
-		// 	effect(() => {
-		// 		// eslint-disable-next-line no-console
-		// 		console.table({
-		// 			...this.resolvedSettings.inputSettings.value,
-		// 			...this.resolvedSettings.graphSettings.value,
-		// 			...this.resolvedSettings.outputSettings.value,
-		// 		});
-		// 	}),
-		// );
-
 		// TODO: GainNode not working on iOS?
 		// https://bugs.webkit.org/show_bug.cgi?id=180696
 		this.register(
 			effect(() => {
 				const state = this.state.value;
-				const { autoGainControl } = this.resolvedSettings.inputSettings.value;
-				const { gain } = this.preferredSettings.graphSettings.value;
+				const { autoGainControl } = this.settings.inputSettings.value;
+				const { gain } = this.settings.graphSettings.value;
 				if (state !== "off") {
 					this.graph!.setGain(autoGainControl ? 1.0 : 2 ** gain);
 				}
@@ -194,7 +150,7 @@ export class FieldRecorderModel extends Component {
 		);
 
 		this.register(
-			this.preferredSettings.inputSettings.subscribe(() => {
+			this.settings.inputSettings.subscribe(() => {
 				if (this.state.peek() === "idle") {
 					this.stopMicrophone(); // Plugin will restart mic automatically.
 				}
@@ -208,7 +164,7 @@ export class FieldRecorderModel extends Component {
 	}
 
 	async startMicrophone() {
-		const inputSettings = this.preferredSettings.inputSettings.peek();
+		const inputSettings = this.settings.inputSettings.peek();
 
 		// TODO: On iOS we can't get the device list until after calling getUserMedia. Which,
 		// is frustrating, given we need to pass a deviceId _into_ getUserMedia. But OK.
@@ -221,7 +177,7 @@ export class FieldRecorderModel extends Component {
 			.map((track) => track.getSettings());
 
 		// TODO: How does bitrate on the stream affect MediaRecorder quality?
-		const outputSettings = this.resolvedSettings.outputSettings.peek();
+		const outputSettings = this.settings.outputSettings.peek();
 		this.recorder = new MediaRecorder(this.graph.destination.stream, {
 			audioBitsPerSecond: outputSettings.bitrate,
 			audioBitrateMode: outputSettings.bitrateMode,

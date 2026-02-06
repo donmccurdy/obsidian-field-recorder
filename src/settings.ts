@@ -15,21 +15,6 @@ type SettingConfig = {
 	transform?: [(src: unknown) => string, (enc: string) => unknown];
 };
 
-// const SETTING_COMPONENT_TYPES: Record<Exclude<SettingKey, "filename">, SettingComponentType> = {
-// 	deviceId: "dropdown",
-// 	bitrate: "dropdown",
-// 	bitrateMode: "dropdown",
-// 	mimeType: "dropdown",
-// 	autoGainControl: "toggle",
-// 	gain: "slider",
-// 	echoCancellation: "toggle",
-// 	noiseSuppression: "toggle",
-// 	voiceIsolation: "toggle",
-// 	contentHint: "dropdown",
-// 	sampleRate: "dropdown",
-// 	sampleSize: "dropdown",
-// };
-
 export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 	deviceId: {
 		name: "Input",
@@ -40,6 +25,7 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 		name: "Quality",
 		type: "dropdown",
 		options: SUPPORTED_BITRATES,
+		transform: [String, Number],
 	},
 	mimeType: {
 		name: "Format",
@@ -78,19 +64,13 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 
 export const SETTING_UNAVAILABLE = "Unavailable on current device.";
 
-export type CreateSettingOptions = Partial<SettingConfig> & {
-	signalIn: Signal<Partial<Record<SettingKey, unknown>>>;
-	signalOut: Signal<Partial<Record<SettingKey, unknown>>>;
-};
-
 export function createSetting<K extends SettingKey>(
 	el: HTMLElement,
 	id: K,
-	options: CreateSettingOptions,
+	signal: Signal<Partial<Record<SettingKey, unknown>>>,
+	options?: Partial<SettingConfig>,
 ): Setting {
-	const { signalIn, signalOut } = options;
 	const config = SETTING_CONFIGS[id]!;
-
 	const setting = new Setting(el)
 		.setName(config.name)
 		.setDesc(config.desc || "")
@@ -105,10 +85,10 @@ export function createSetting<K extends SettingKey>(
 		case "toggle":
 			setting.addToggle((toggle) =>
 				toggle
-					.setValue(signalIn.peek()[id] as boolean)
+					.setValue(signal.peek()[id] as boolean)
 					.setDisabled(true)
 					.onChange((value) => {
-						signalOut.value = { ...signalOut.peek(), [id]: value };
+						signal.value = { ...signal.peek(), [id]: value };
 					}),
 			);
 			break;
@@ -116,27 +96,28 @@ export function createSetting<K extends SettingKey>(
 		case "slider":
 			setting.addSlider((slider) =>
 				slider
-					.setValue(signalIn.peek()[id] as number)
+					.setValue(signal.peek()[id] as number)
 					.setInstant(true)
 					.setLimits(...(config.limits as [number, number, number]))
 					.setDynamicTooltip()
 					.setDisabled(true)
 					.onChange((value) => {
-						signalOut.value = { ...signalOut.peek(), [id]: value };
+						signal.value = { ...signal.peek(), [id]: value };
 					}),
 			);
 			break;
 
 		case "dropdown":
-			setting.addDropdown((dropdown) =>
+			setting.addDropdown((dropdown) => {
+				const [tIn, tOut] = options?.transform || [String, String];
 				dropdown
-					.setValue(signalIn.peek()[id] as string)
 					.addOptions(options?.options ?? (config.options as Record<string, string>))
+					.setValue(tIn(signal.peek()[id]))
 					.setDisabled(true)
 					.onChange((value) => {
-						signalOut.value = { ...signalOut.peek(), [id]: value };
-					}),
-			);
+						signal.value = { ...signal.peek(), [id]: tOut(value) };
+					});
+			});
 			break;
 
 		default:
