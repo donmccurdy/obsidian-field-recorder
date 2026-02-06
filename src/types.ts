@@ -15,12 +15,14 @@ export type InputSettings = {
 	contentHint: ContentHint;
 };
 
-export type InputSettingsSupported = Record<keyof InputSettings, boolean>;
+export type InputSettingKey = keyof InputSettings;
 
 // TODO: Reverb, compression, ...
 export type GraphSettings = {
 	gain: number;
 };
+
+export type GraphSettingKey = keyof GraphSettings;
 
 export type OutputSettings = {
 	filename: string;
@@ -29,13 +31,23 @@ export type OutputSettings = {
 	bitrateMode: BitrateMode;
 };
 
+export type OutputSettingKey = keyof OutputSettings;
+
+export type SettingKey = InputSettingKey | GraphSettingKey | OutputSettingKey;
+
 export type PluginSettings = {
 	inputSettings: Signal<InputSettings>;
 	graphSettings: Signal<GraphSettings>;
 	outputSettings: Signal<OutputSettings>;
 };
 
-// TODO: Versioning.
+export type PluginSettingsDisabled = {
+	inputSettings: Signal<Record<keyof InputSettings, boolean>>;
+	graphSettings: Signal<Record<keyof GraphSettings, boolean>>;
+	outputSettings: Signal<Record<keyof OutputSettings, boolean>>;
+};
+
+// TODO: Versioning?
 // TODO: Keep settings in localstorage, or exclude 'deviceId'?
 export type PluginSettingsStorage = {
 	inputSettings: Partial<InputSettings>;

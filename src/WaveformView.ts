@@ -1,21 +1,21 @@
 import type { Signal } from "@preact/signals-core";
 import { Component } from "obsidian";
+import type { AudioProcessor } from "./AudioProcessor";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 import { formatDuration, type Palette } from "./utils";
-import type { WaveformProcessor } from "./WaveformProcessor";
 
 const PAD = 4;
 
 export type WaveformViewProps = {
 	canvasEl: HTMLCanvasElement;
 	model: FieldRecorderModel;
-	processor: WaveformProcessor;
+	processor: AudioProcessor;
 	palette: Signal<Palette>;
 };
 
 export class WaveformView extends Component {
 	model: FieldRecorderModel;
-	processor: WaveformProcessor;
+	processor: AudioProcessor;
 	canvasEl: HTMLCanvasElement;
 	ctx: CanvasRenderingContext2D;
 	palette: Signal<Palette>;

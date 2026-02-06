@@ -1,11 +1,23 @@
 import { WaveformView } from "WaveformView";
-import { effect } from "@preact/signals-core";
-import { ItemView, type Setting, setIcon, type WorkspaceLeaf } from "obsidian";
+import { computed, effect, type Signal } from "@preact/signals-core";
+import {
+	type DropdownComponent,
+	ItemView,
+	type Setting,
+	setIcon,
+	type WorkspaceLeaf,
+} from "obsidian";
 import { getDefaultFilename } from "utils";
-import { VIEW_TYPE_FIELD_RECORDER } from "./constants";
+import {
+	GRAPH_SETTING_KEYS,
+	INPUT_SETTING_KEYS,
+	OUTPUT_SETTING_KEYS,
+	VIEW_TYPE_FIELD_RECORDER,
+} from "./constants";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
-import { createSetting, type SettingKey } from "./settings";
+import { createSetting } from "./settings";
+import type { GraphSettingKey, InputSettingKey, OutputSettingKey } from "./types";
 
 type FieldRecorderViewProps = {
 	plugin: FieldRecorderPlugin;
@@ -15,15 +27,28 @@ type FieldRecorderViewProps = {
 export class FieldRecorderView extends ItemView {
 	private plugin: FieldRecorderPlugin;
 	private model: FieldRecorderModel;
-	// TODO: Not partial?
-	private settings: Partial<Record<SettingKey, Setting>> | null = null;
+	private ui: {
+		inputSettings: Partial<Record<InputSettingKey, Setting>>;
+		graphSettings: Partial<Record<GraphSettingKey, Setting>>;
+		outputSettings: Partial<Record<OutputSettingKey, Setting>>;
+	} = { inputSettings: {}, graphSettings: {}, outputSettings: {} };
 	private waveformView: WaveformView | null = null;
+	inputOptions: Signal<Record<string, string>>;
 	private formSubscriptions: (() => void)[] = [];
 
 	constructor(leaf: WorkspaceLeaf, props: FieldRecorderViewProps) {
 		super(leaf);
 		this.plugin = props.plugin;
 		this.model = props.model;
+
+		this.inputOptions = computed(() =>
+			Object.fromEntries(
+				this.model.inputDevices.value.map((device) => {
+					const label = device.label.replace(/\(.*\)/, "").trim();
+					return [device.deviceId, label];
+				}),
+			),
+		);
 	}
 
 	getViewType(): string {
@@ -56,6 +81,53 @@ export class FieldRecorderView extends ItemView {
 			this.plugin.viewsVisibleCount.value--;
 			observer.disconnect();
 		});
+
+		this.register(
+			effect(() => {
+				const disabled = this.model.disabledSettings.inputSettings.value;
+				for (const key of INPUT_SETTING_KEYS) {
+					const setting = this.ui.inputSettings[key];
+					setting?.setDisabled(disabled[key]);
+					setting?.components[0]?.setDisabled(disabled[key]);
+				}
+			}),
+		);
+
+		this.register(
+			effect(() => {
+				const disabled = this.model.disabledSettings.graphSettings.value;
+				for (const key of GRAPH_SETTING_KEYS) {
+					const setting = this.ui.graphSettings[key];
+					setting?.setDisabled(disabled[key]);
+					setting?.components[0]?.setDisabled(disabled[key]);
+				}
+			}),
+		);
+
+		this.register(
+			effect(() => {
+				const disabled = this.model.disabledSettings.outputSettings.value;
+				for (const key of OUTPUT_SETTING_KEYS) {
+					const setting = this.ui.outputSettings[key];
+					setting?.setDisabled(disabled[key]);
+					setting?.components[0]?.setDisabled(disabled[key]);
+				}
+			}),
+		);
+
+		this.register(
+			effect(() => {
+				const inputDevices = this.inputOptions.value;
+				const device = this.model.activeInput.value;
+				const deviceSetting = this.ui.inputSettings.deviceId;
+				const deviceDropdown = deviceSetting?.components[0] as DropdownComponent | null;
+				if (deviceDropdown) {
+					// TODO: No other way to clear dropdown options?
+					deviceDropdown.selectEl.innerHTML = "";
+					deviceDropdown.addOptions(inputDevices).setValue(device?.deviceId || "default");
+				}
+			}),
+		);
 	}
 
 	tick() {
@@ -66,7 +138,8 @@ export class FieldRecorderView extends ItemView {
 		const { plugin, model, containerEl } = this;
 		const { palette, processor } = plugin;
 
-		const { inputSettings, graphSettings, outputSettings } = plugin.settings;
+		const resolved = model.resolvedSettings;
+		const preferred = model.preferredSettings;
 
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
@@ -76,7 +149,7 @@ export class FieldRecorderView extends ItemView {
 		});
 
 		const filenameEl = recordSectionEl.createEl("input", {
-			value: outputSettings.peek().filename,
+			value: preferred.outputSettings.peek().filename,
 			placeholder: getDefaultFilename(),
 			cls: "fieldrec-input",
 			attr: {
@@ -87,7 +160,7 @@ export class FieldRecorderView extends ItemView {
 
 		filenameEl.addEventListener("change", () => {
 			const filename = filenameEl.value;
-			outputSettings.value = { ...outputSettings.peek(), filename };
+			preferred.outputSettings.value = { ...preferred.outputSettings.peek(), filename };
 		});
 
 		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
@@ -133,28 +206,48 @@ export class FieldRecorderView extends ItemView {
 			cls: ["fieldrec-section", "fieldrec-section-settings"],
 		});
 
-		const supportedConstraints = {} as Record<string, boolean>; // TODO: model.supportedConstraints.peek();
-		const inputDevices = [] as MediaDeviceInfo[]; // TODO: model.inputDevices.peek();
-
-		const inputOptions = Object.fromEntries(
-			inputDevices.map((device) => {
-				const label = device.label.replace(/\(.*\)/, "").trim();
-				return [device.deviceId, label];
-			}),
-		);
-
 		const el = settingsSectionEl;
 
-		this.settings = {
-			deviceId: createSetting(el, "deviceId", inputSettings, { options: inputOptions }),
-			bitrate: createSetting(el, "bitrate", outputSettings),
-			mimeType: createSetting(el, "mimeType", outputSettings),
-			autoGainControl: createSetting(el, "autoGainControl", inputSettings),
-			gain: createSetting(el, "gain", graphSettings),
-			noiseSuppression: createSetting(el, "noiseSuppression", inputSettings),
-			voiceIsolation: createSetting(el, "voiceIsolation", inputSettings),
-			echoCancellation: createSetting(el, "echoCancellation", inputSettings),
-		};
+		this.ui.inputSettings.deviceId = createSetting(el, "deviceId", {
+			signalIn: resolved.inputSettings,
+			signalOut: preferred.inputSettings,
+			options: this.inputOptions.peek(),
+		});
+
+		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", {
+			signalIn: resolved.outputSettings,
+			signalOut: preferred.outputSettings,
+		});
+
+		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", {
+			signalIn: resolved.outputSettings,
+			signalOut: preferred.outputSettings,
+		});
+
+		this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", {
+			signalIn: resolved.inputSettings,
+			signalOut: preferred.inputSettings,
+		});
+
+		this.ui.graphSettings.gain = createSetting(el, "gain", {
+			signalIn: resolved.graphSettings,
+			signalOut: preferred.graphSettings,
+		});
+
+		this.ui.inputSettings.noiseSuppression = createSetting(el, "noiseSuppression", {
+			signalIn: resolved.inputSettings,
+			signalOut: preferred.inputSettings,
+		});
+
+		this.ui.inputSettings.voiceIsolation = createSetting(el, "voiceIsolation", {
+			signalIn: resolved.inputSettings,
+			signalOut: preferred.inputSettings,
+		});
+
+		this.ui.inputSettings.echoCancellation = createSetting(el, "echoCancellation", {
+			signalIn: resolved.inputSettings,
+			signalOut: preferred.inputSettings,
+		});
 
 		this.plugin.viewsActiveCount.value++;
 	}

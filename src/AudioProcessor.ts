@@ -7,11 +7,11 @@ export const BinLayout = {
 	CLIPPED_U8: 8,
 };
 
-export type WaveformProcessorProps = {
+export type AudioProcessorProps = {
 	model: FieldRecorderModel;
 };
 
-export class WaveformProcessor extends Component {
+export class AudioProcessor extends Component {
 	private model: FieldRecorderModel;
 	private output: DataView<ArrayBuffer> | null = null;
 	private startTimeMs = Date.now();
@@ -26,7 +26,7 @@ export class WaveformProcessor extends Component {
 	// TODO: Better way to determine reference level?
 	public referenceLevelDb = Platform.isIosApp ? -60 : -40;
 
-	constructor(props: WaveformProcessorProps) {
+	constructor(props: AudioProcessorProps) {
 		super();
 		this.model = props.model;
 	}

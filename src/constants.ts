@@ -56,6 +56,26 @@ export const SUPPORTED_BITRATES: Record<string, string> = {
 	// "320": "320 kb/s", // highest
 };
 
+export const INPUT_SETTING_KEYS = [
+	"deviceId",
+	"autoGainControl",
+	"contentHint",
+	"echoCancellation",
+	"noiseSuppression",
+	"sampleRate",
+	"sampleSize",
+	"voiceIsolation",
+] satisfies (keyof InputSettings)[];
+
+export const GRAPH_SETTING_KEYS = ["gain"] satisfies (keyof GraphSettings)[];
+
+export const OUTPUT_SETTING_KEYS = [
+	"filename",
+	"mimeType",
+	"bitrate",
+	"bitrateMode",
+] satisfies (keyof OutputSettings)[];
+
 export const DEFAULT_SETTINGS = {
 	inputSettings: {
 		deviceId: "default",

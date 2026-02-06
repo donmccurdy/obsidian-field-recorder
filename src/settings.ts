@@ -1,21 +1,36 @@
 import type { Signal } from "@preact/signals-core";
 import { Setting } from "obsidian";
 import { MIME_TYPE_TO_FORMAT, SUPPORTED_BITRATES, SUPPORTED_MIME_TYPES } from "./constants";
-import type { GraphSettings, InputSettings, OutputSettings } from "./types";
+import type { SettingKey } from "./types";
+
+type SettingComponentType = "toggle" | "slider" | "dropdown";
 
 type SettingConfig = {
 	name: string;
 	desc?: string;
-	type: "toggle" | "slider" | "dropdown";
+	type: SettingComponentType;
 	options?: Record<string, string>;
 	limits?: [number, number, number];
 	cls?: string[];
 	transform?: [(src: unknown) => string, (enc: string) => unknown];
 };
 
-export type SettingKey = keyof InputSettings | keyof GraphSettings | keyof OutputSettings;
+// const SETTING_COMPONENT_TYPES: Record<Exclude<SettingKey, "filename">, SettingComponentType> = {
+// 	deviceId: "dropdown",
+// 	bitrate: "dropdown",
+// 	bitrateMode: "dropdown",
+// 	mimeType: "dropdown",
+// 	autoGainControl: "toggle",
+// 	gain: "slider",
+// 	echoCancellation: "toggle",
+// 	noiseSuppression: "toggle",
+// 	voiceIsolation: "toggle",
+// 	contentHint: "dropdown",
+// 	sampleRate: "dropdown",
+// 	sampleSize: "dropdown",
+// };
 
-const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
+export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 	deviceId: {
 		name: "Input",
 		type: "dropdown",
@@ -63,13 +78,19 @@ const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 
 export const SETTING_UNAVAILABLE = "Unavailable on current device.";
 
+export type CreateSettingOptions = Partial<SettingConfig> & {
+	signalIn: Signal<Partial<Record<SettingKey, unknown>>>;
+	signalOut: Signal<Partial<Record<SettingKey, unknown>>>;
+};
+
 export function createSetting<K extends SettingKey>(
 	el: HTMLElement,
 	id: K,
-	signal: Signal<Partial<Record<SettingKey, unknown>>>,
-	options?: Partial<SettingConfig>,
+	options: CreateSettingOptions,
 ): Setting {
+	const { signalIn, signalOut } = options;
 	const config = SETTING_CONFIGS[id]!;
+
 	const setting = new Setting(el)
 		.setName(config.name)
 		.setDesc(config.desc || "")
@@ -84,10 +105,10 @@ export function createSetting<K extends SettingKey>(
 		case "toggle":
 			setting.addToggle((toggle) =>
 				toggle
-					.setValue(signal.peek()[id] as boolean)
+					.setValue(signalIn.peek()[id] as boolean)
 					.setDisabled(true)
 					.onChange((value) => {
-						signal.value = { ...signal.peek(), [id]: value };
+						signalOut.value = { ...signalOut.peek(), [id]: value };
 					}),
 			);
 			break;
@@ -95,13 +116,13 @@ export function createSetting<K extends SettingKey>(
 		case "slider":
 			setting.addSlider((slider) =>
 				slider
-					.setValue(signal.peek()[id] as number)
+					.setValue(signalIn.peek()[id] as number)
 					.setInstant(true)
 					.setLimits(...(config.limits as [number, number, number]))
 					.setDynamicTooltip()
 					.setDisabled(true)
 					.onChange((value) => {
-						signal.value = { ...signal.peek(), [id]: value };
+						signalOut.value = { ...signalOut.peek(), [id]: value };
 					}),
 			);
 			break;
@@ -109,11 +130,11 @@ export function createSetting<K extends SettingKey>(
 		case "dropdown":
 			setting.addDropdown((dropdown) =>
 				dropdown
-					.setValue(signal.peek()[id] as string)
+					.setValue(signalIn.peek()[id] as string)
 					.addOptions(options?.options ?? (config.options as Record<string, string>))
 					.setDisabled(true)
 					.onChange((value) => {
-						signal.value = { ...signal.peek(), [id]: value };
+						signalOut.value = { ...signalOut.peek(), [id]: value };
 					}),
 			);
 			break;
