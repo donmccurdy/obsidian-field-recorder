@@ -1,3 +1,4 @@
+import { effect } from "@preact/signals-core";
 import { Component, Platform } from "obsidian";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
 
@@ -13,7 +14,8 @@ export type AudioProcessorProps = {
 
 export class AudioProcessor extends Component {
 	private model: FieldRecorderModel;
-	private output: DataView<ArrayBuffer> | null = null;
+	private outputBytes: Uint8Array<ArrayBuffer> | null = null;
+	private outputView: DataView<ArrayBuffer> | null = null;
 	private startTimeMs = Date.now();
 
 	public binCount = 32;
@@ -32,21 +34,31 @@ export class AudioProcessor extends Component {
 	}
 
 	onload() {
-		this.output = new DataView(new ArrayBuffer(this.binCount * this.binByteLength));
+		const outputBuffer = new ArrayBuffer(this.binCount * this.binByteLength);
+		this.outputView = new DataView(outputBuffer);
+		this.outputBytes = new Uint8Array(outputBuffer);
+
+		this.register(
+			effect(() => {
+				if (this.model.state.value === "off") {
+					this.outputBytes!.fill(0);
+				}
+			}),
+		);
 	}
 
 	onunload(): void {
-		this.output = null;
+		this.outputView = null;
 	}
 
 	getBinVolume(i: number): number {
 		const binByteOffset = this._getBinIndex(i) * this.binByteLength;
-		return this.output!.getFloat32(binByteOffset + BinLayout.VOLUME_F32, true);
+		return this.outputView!.getFloat32(binByteOffset + BinLayout.VOLUME_F32, true);
 	}
 
 	getBinClipped(i: number): boolean {
 		const binByteOffset = this._getBinIndex(i) * this.binByteLength;
-		return this.output!.getUint8(binByteOffset + BinLayout.CLIPPED_U8) === 1;
+		return this.outputView!.getUint8(binByteOffset + BinLayout.CLIPPED_U8) === 1;
 	}
 
 	private _getBinIndex(i: number): number {
@@ -57,7 +69,7 @@ export class AudioProcessor extends Component {
 
 	tick() {
 		const state = this.model.state.peek();
-		const output = this.output!;
+		const output = this.outputView!;
 
 		const timeMs = Date.now() - this.startTimeMs;
 		const binIndex = Math.floor(timeMs / this.binSizeMs) % this.binCount;
