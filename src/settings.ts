@@ -21,6 +21,11 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 		type: "dropdown",
 		cls: ["-wide"],
 	},
+	monitor: {
+		name: "Monitor",
+		desc: "Play back input audio while recording (headphones recommended).",
+		type: "toggle",
+	},
 	bitrate: {
 		name: "Quality",
 		type: "dropdown",
@@ -43,11 +48,6 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 		name: "Gain",
 		type: "slider",
 		limits: [-5, +5, 0.05],
-	},
-	echoCancellation: {
-		name: "Echo cancellation",
-		desc: "Reduces crosstalk between output and input devices.",
-		type: "toggle",
 	},
 	noiseSuppression: {
 		// TODO: Has no effect if voice isolation is on, and should be disabled.

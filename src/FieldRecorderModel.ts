@@ -67,10 +67,8 @@ export class FieldRecorderModel extends Component {
 				return {
 					deviceId: !("deviceId" in capabilities),
 					autoGainControl: !("autoGainControl" in capabilities),
-					echoCancellation: !("echoCancellation" in capabilities),
 					noiseSuppression: !("noiseSuppression" in capabilities),
 					voiceIsolation: !("voiceIsolation" in capabilities),
-					contentHint: !("contentHint" in capabilities),
 					sampleRate: !("sampleRate" in capabilities),
 					sampleSize: !("sampleSize" in capabilities),
 				};
@@ -79,7 +77,10 @@ export class FieldRecorderModel extends Component {
 			graphSettings: computed(() => {
 				const state = this.state.value;
 				const autoGainControl = this.settings.inputSettings.value.autoGainControl;
-				return { gain: state === "off" || autoGainControl };
+				return {
+					monitor: state === "off",
+					gain: state === "off" || autoGainControl,
+				};
 			}),
 
 			outputSettings: computed(() => {
@@ -142,8 +143,9 @@ export class FieldRecorderModel extends Component {
 			effect(() => {
 				const state = this.state.value;
 				const { autoGainControl } = this.settings.inputSettings.value;
-				const { gain } = this.settings.graphSettings.value;
+				const { monitor, gain } = this.settings.graphSettings.value;
 				if (state !== "off") {
+					this.graph!.setMonitor(monitor);
 					this.graph!.setGain(autoGainControl ? 1.0 : 2 ** gain);
 				}
 			}),

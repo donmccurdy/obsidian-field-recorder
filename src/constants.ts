@@ -1,6 +1,5 @@
 import type {
 	BitrateMode,
-	ContentHint,
 	GraphSettingKey,
 	GraphSettings,
 	InputSettingKey,
@@ -64,15 +63,13 @@ export const SUPPORTED_BITRATES: Record<string, string> = {
 export const INPUT_SETTING_KEYS = [
 	"deviceId",
 	"autoGainControl",
-	"contentHint",
-	"echoCancellation",
 	"noiseSuppression",
 	"sampleRate",
 	"sampleSize",
 	"voiceIsolation",
 ] satisfies InputSettingKey[];
 
-export const GRAPH_SETTING_KEYS = ["gain"] satisfies GraphSettingKey[];
+export const GRAPH_SETTING_KEYS = ["monitor", "gain"] satisfies GraphSettingKey[];
 
 export const OUTPUT_SETTING_KEYS = [
 	"filename",
@@ -88,12 +85,10 @@ export const DEFAULT_SETTINGS = {
 		sampleSize: 16,
 		autoGainControl: true,
 		noiseSuppression: false,
-		echoCancellation: false,
 		voiceIsolation: false,
-		contentHint: "" as ContentHint,
 	} satisfies InputSettings,
 
-	graphSettings: { gain: 0 } satisfies GraphSettings,
+	graphSettings: { monitor: false, gain: 0 } satisfies GraphSettings,
 
 	outputSettings: {
 		filename: "",

@@ -3,7 +3,6 @@ import type { Signal } from "@preact/signals-core";
 export type State = "off" | "idle" | "paused" | "recording";
 
 export type BitrateMode = "variable" | "constant";
-export type ContentHint = "" | "speech" | "speech-recognition" | "music";
 
 // TODO: Type check that this is compatible with MediaTrackConstraints?
 export type InputSettings = {
@@ -12,15 +11,14 @@ export type InputSettings = {
 	sampleSize: number;
 	autoGainControl: boolean;
 	noiseSuppression: boolean;
-	echoCancellation: boolean;
 	voiceIsolation: boolean;
-	contentHint: ContentHint;
 };
 
 export type InputSettingKey = keyof InputSettings;
 
 // TODO: Reverb, compression, ...
 export type GraphSettings = {
+	monitor: boolean;
 	gain: number;
 };
 

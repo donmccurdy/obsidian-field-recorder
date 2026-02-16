@@ -21,9 +21,10 @@ export class AudioGraph extends Component {
 				...settings,
 				noiseSuppression: { exact: settings.noiseSuppression },
 				voiceIsolation: { exact: settings.voiceIsolation },
+				echoCancellation: { exact: false },
 			},
 		});
-		const ctx = new AudioContext({ sinkId: { type: "none" } });
+		const ctx = new AudioContext();
 
 		const source = ctx.createMediaStreamSource(stream);
 		const gain = ctx.createGain();
@@ -39,6 +40,19 @@ export class AudioGraph extends Component {
 
 	setGain(gain: number): void {
 		this.gain.gain.value = gain;
+	}
+
+	setMonitor(monitor: boolean): void {
+		try {
+			if (monitor) {
+				this.gain.connect(this.ctx.destination);
+			} else {
+				this.gain.disconnect(this.ctx.destination);
+			}
+		} catch {
+			// Cannot detect if already connected/disconnected; silence the error.
+			// https://stackoverflow.com/q/43150875
+		}
 	}
 
 	onunload(): void {

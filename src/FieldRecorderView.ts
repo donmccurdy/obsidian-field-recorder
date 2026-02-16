@@ -210,13 +210,13 @@ export class FieldRecorderView extends ItemView {
 		this.ui.inputSettings.deviceId = createSetting(el, "deviceId", inputSettings, {
 			options: this.inputOptions.peek(),
 		});
+		this.ui.graphSettings.monitor = createSetting(el, "monitor", graphSettings);
 		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", outputSettings);
 		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", outputSettings);
 		this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", inputSettings);
 		this.ui.graphSettings.gain = createSetting(el, "gain", graphSettings);
 		this.ui.inputSettings.noiseSuppression = createSetting(el, "noiseSuppression", inputSettings);
 		this.ui.inputSettings.voiceIsolation = createSetting(el, "voiceIsolation", inputSettings);
-		this.ui.inputSettings.echoCancellation = createSetting(el, "echoCancellation", inputSettings);
 
 		this.plugin.viewsActiveCount.value++;
 	}
