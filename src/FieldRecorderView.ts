@@ -3,6 +3,7 @@ import { computed, effect, type Signal } from "@preact/signals-core";
 import {
 	type DropdownComponent,
 	ItemView,
+	Platform,
 	type Setting,
 	setIcon,
 	type WorkspaceLeaf,
@@ -210,13 +211,20 @@ export class FieldRecorderView extends ItemView {
 		this.ui.inputSettings.deviceId = createSetting(el, "deviceId", inputSettings, {
 			options: this.inputOptions.peek(),
 		});
-		this.ui.graphSettings.monitor = createSetting(el, "monitor", graphSettings);
+
+		if (Platform.isDesktop) {
+			this.ui.graphSettings.monitor = createSetting(el, "monitor", graphSettings);
+		}
+
 		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", outputSettings);
 		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", outputSettings);
-		this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", inputSettings);
-		this.ui.graphSettings.gain = createSetting(el, "gain", graphSettings);
-		this.ui.inputSettings.noiseSuppression = createSetting(el, "noiseSuppression", inputSettings);
-		this.ui.inputSettings.voiceIsolation = createSetting(el, "voiceIsolation", inputSettings);
+
+		if (!Platform.isIosApp) {
+			this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", inputSettings);
+			this.ui.graphSettings.gain = createSetting(el, "gain", graphSettings);
+			this.ui.inputSettings.noiseSuppression = createSetting(el, "noiseSuppression", inputSettings);
+			this.ui.inputSettings.voiceIsolation = createSetting(el, "voiceIsolation", inputSettings);
+		}
 
 		this.plugin.viewsActiveCount.value++;
 	}
