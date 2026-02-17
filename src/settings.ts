@@ -1,6 +1,6 @@
 import type { Signal } from "@preact/signals-core";
 import { Setting } from "obsidian";
-import { MIME_TYPE_TO_FORMAT, SUPPORTED_BITRATES, SUPPORTED_MIME_TYPES } from "./constants";
+import { MIME_TYPE_TO_NAME, SUPPORTED_BITRATES, SUPPORTED_MIME_TYPES } from "./constants";
 import type { SettingKey } from "./types";
 
 type SettingComponentType = "toggle" | "slider" | "dropdown";
@@ -36,7 +36,7 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 		name: "Format",
 		type: "dropdown",
 		options: Object.fromEntries(
-			SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, MIME_TYPE_TO_FORMAT[mimeType]]),
+			SUPPORTED_MIME_TYPES.map((mimeType) => [mimeType, MIME_TYPE_TO_NAME[mimeType]]),
 		),
 	},
 	autoGainControl: {

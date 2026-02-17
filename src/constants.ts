@@ -4,6 +4,7 @@ import type {
 	GraphSettings,
 	InputSettingKey,
 	InputSettings,
+	MimeType,
 	OutputSettingKey,
 	OutputSettings,
 	PluginSettingsStorage,
@@ -13,42 +14,27 @@ export const LOCAL_STORAGE_KEY = "field-recorder:settings";
 
 export const VIEW_TYPE_FIELD_RECORDER = "field-recorder-view";
 
-const KNOWN_MIME_TYPES = [
-	"audio/aac",
-	"audio/flac",
-	"audio/wav",
-	"audio/wave",
-	"audio/mpeg",
-	"audio/ogg",
-	"audio/webm",
-	"audio/mp4",
-];
+export const MIME_TYPE_TO_EXTENSION: Record<MimeType, string> = {
+	"audio/mp4": "m4a",
+	"audio/webm;codecs=opus": "webm",
+	"audio/webm;codecs=pcm": "webm",
+};
+
+export const MIME_TYPE_TO_NAME: Record<MimeType, string> = {
+	"audio/mp4": "M4A",
+	"audio/webm;codecs=opus": "WebM (Opus)",
+	"audio/webm;codecs=pcm": "WebM (PCM)",
+};
 
 export const SUPPORTED_MIME_TYPES = /* @__PURE__ */ (() => {
 	const supportedTypes: string[] = [];
-	for (const mimeType of KNOWN_MIME_TYPES) {
+	for (const mimeType in MIME_TYPE_TO_EXTENSION) {
 		if (MediaRecorder.isTypeSupported(mimeType)) {
 			supportedTypes.push(mimeType);
 		}
 	}
-	return supportedTypes;
+	return supportedTypes as MimeType[];
 })();
-
-export const MIME_TYPE_TO_EXTENSION: Record<string, string> = {
-	"audio/mpeg": "mp3",
-	"audio/ogg": "ogg",
-	"audio/webm": "webm",
-	"audio/wav": "wav",
-	"audio/mp4": "m4a",
-};
-
-export const MIME_TYPE_TO_FORMAT: Record<string, string> = {
-	"audio/mpeg": "MP3",
-	"audio/ogg": "OGG",
-	"audio/wav": "WAV",
-	"audio/mp4": "M4A",
-	"audio/webm": "WebM",
-};
 
 export const SUPPORTED_BITRATES: Record<string, string> = {
 	"32000": "32 kb/s", // lowest

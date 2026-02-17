@@ -2,10 +2,15 @@ import { FieldRecorderModel } from "FieldRecorderModel";
 import { effect, signal } from "@preact/signals-core";
 import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import { AudioProcessor } from "./AudioProcessor";
-import { DEFAULT_SETTINGS, LOCAL_STORAGE_KEY, VIEW_TYPE_FIELD_RECORDER } from "./constants";
+import {
+	DEFAULT_SETTINGS,
+	LOCAL_STORAGE_KEY,
+	MIME_TYPE_TO_EXTENSION,
+	VIEW_TYPE_FIELD_RECORDER,
+} from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
 import type { PluginSettings, PluginSettingsStorage, State } from "./types";
-import { detectPalette, frame, getDefaultFilename, getFileExtension } from "./utils";
+import { detectPalette, frame, getDefaultFilename } from "./utils";
 
 export class FieldRecorderPlugin extends Plugin {
 	model: FieldRecorderModel;
@@ -190,7 +195,7 @@ export class FieldRecorderPlugin extends Plugin {
 
 		const outputSettings = this.model.settings.outputSettings.peek();
 		const basename = outputSettings.filename || getDefaultFilename();
-		const filename = `${basename}.${getFileExtension(outputSettings.mimeType)}`;
+		const filename = `${basename}.${MIME_TYPE_TO_EXTENSION[outputSettings.mimeType]}`;
 		const path = await fileManager.getAvailablePathForAttachment(filename);
 		const file = await vault.createBinary(path, data);
 

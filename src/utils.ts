@@ -1,13 +1,3 @@
-import { MIME_TYPE_TO_EXTENSION, SUPPORTED_MIME_TYPES } from "./constants";
-
-export function getFileExtension(mimeType: string) {
-	const match = mimeType.match(/^(audio\/\w+).*/);
-	if (match && SUPPORTED_MIME_TYPES.some((mimeType) => match[1]!.startsWith(mimeType))) {
-		return MIME_TYPE_TO_EXTENSION[match[1]!];
-	}
-	throw new Error(`Unsupported mimeType: "${mimeType}"`);
-}
-
 export function getDefaultFilename() {
 	const date = new Date();
 	const yyyy = date.getFullYear();

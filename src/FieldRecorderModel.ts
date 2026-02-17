@@ -173,10 +173,26 @@ export class FieldRecorderModel extends Component {
 		this.inputDevices.value = await this.getInputDevices();
 		this.graph = this.addChild(await AudioGraph.createGraph(inputSettings));
 		this.inputDevices.value = await this.getInputDevices();
-
 		this.inputTrackSettings.value = this.graph.stream
 			.getAudioTracks()
 			.map((track) => track.getSettings());
+
+		this.state.value = "idle";
+	}
+
+	stopMicrophone() {
+		const { state } = this;
+		assert(state.peek() === "idle");
+
+		this.removeChild(this.graph!);
+		this.graph = null;
+		state.value = "off";
+	}
+
+	startRecording() {
+		const { state } = this;
+		assert(state.peek() === "idle" || state.peek() === "paused");
+		assert(this.graph);
 
 		// TODO: How does bitrate on the stream affect MediaRecorder quality?
 		const outputSettings = this.settings.outputSettings.peek();
@@ -194,25 +210,10 @@ export class FieldRecorderModel extends Component {
 			}
 		});
 
-		this.state.value = "idle";
-	}
-
-	stopMicrophone() {
-		assert(this.state.value === "idle");
-		this.removeChild(this.graph!);
-		this.graph = null;
-		this.state.value = "off";
-	}
-
-	startRecording() {
-		const { state, recorder } = this;
-		assert(state.value === "idle" || state.value === "paused");
-		assert(recorder);
-
-		if (state.value === "idle") {
-			recorder.start();
+		if (state.peek() === "idle") {
+			this.recorder.start();
 		} else {
-			recorder.resume();
+			this.recorder.resume();
 		}
 
 		this.state.value = "recording";
@@ -220,17 +221,24 @@ export class FieldRecorderModel extends Component {
 	}
 
 	pauseRecording() {
-		const { state, recorder } = this;
-		assert(state.value === "recording");
-		recorder!.pause();
-		this.state.value = "paused";
-		this.timer.pause();
+		const { state, recorder, timer } = this;
+		assert(state.peek() === "recording");
+		assert(recorder);
+
+		recorder.pause();
+
+		state.value = "paused";
+		timer.pause();
 	}
 
 	stopRecording() {
-		const { state, recorder } = this;
-		assert(state.value === "recording" || state.value === "paused");
-		recorder!.stop();
+		const { state } = this;
+		assert(state.peek() === "recording" || state.peek() === "paused");
+		assert(this.recorder);
+
+		this.recorder.stop();
+		this.recorder = null;
+
 		this.state.value = "idle";
 		this.timer.stop();
 	}
