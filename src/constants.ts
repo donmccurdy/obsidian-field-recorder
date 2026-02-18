@@ -50,8 +50,6 @@ export const INPUT_SETTING_KEYS = [
 	"deviceId",
 	"autoGainControl",
 	"noiseSuppression",
-	"sampleRate",
-	"sampleSize",
 	"voiceIsolation",
 ] satisfies InputSettingKey[];
 
@@ -67,8 +65,6 @@ export const OUTPUT_SETTING_KEYS = [
 export const DEFAULT_SETTINGS = {
 	inputSettings: {
 		deviceId: "default",
-		sampleRate: 44100,
-		sampleSize: 16,
 		autoGainControl: true,
 		noiseSuppression: false,
 		voiceIsolation: false,

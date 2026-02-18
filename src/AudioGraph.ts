@@ -17,8 +17,10 @@ export class AudioGraph extends Component {
 
 	static async createGraph(settings: InputSettings): Promise<AudioGraph> {
 		const stream = await navigator.mediaDevices.getUserMedia({
+			video: false,
 			audio: {
-				...settings,
+				deviceId: { exact: settings.deviceId },
+				autoGainControl: { exact: settings.autoGainControl },
 				noiseSuppression: { exact: settings.noiseSuppression },
 				voiceIsolation: { exact: settings.voiceIsolation },
 				echoCancellation: { exact: false },

@@ -1,7 +1,7 @@
 import { computed, effect, type Signal, signal } from "@preact/signals-core";
 import { Component } from "obsidian";
 import { AudioGraph } from "./AudioGraph";
-import { DEFAULT_SETTINGS, INPUT_SETTING_KEYS } from "./constants";
+import { INPUT_SETTING_KEYS } from "./constants";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
 import { Timer } from "./Timer";
 import type { InputSettingKey, PluginSettings, PluginSettingsDisabled, State } from "./types";
@@ -21,8 +21,6 @@ export class FieldRecorderModel extends Component {
 	 */
 	public readonly inputDevices = signal<InputDeviceInfo[]>([]);
 	public readonly inputTrackSettings = signal<MediaTrackSettings[]>([]);
-	public readonly inputSampleRates: Signal<number[]>;
-	public readonly inputSampleSizes: Signal<number[]>;
 
 	/** Selected audio input device. Device may remain selected if state='off'. */
 	public readonly activeInput: Signal<InputDeviceInfo | null>;
@@ -69,8 +67,6 @@ export class FieldRecorderModel extends Component {
 					autoGainControl: !("autoGainControl" in capabilities),
 					noiseSuppression: !("noiseSuppression" in capabilities),
 					voiceIsolation: !("voiceIsolation" in capabilities),
-					sampleRate: !("sampleRate" in capabilities),
-					sampleSize: !("sampleSize" in capabilities),
 				};
 			}),
 
@@ -103,24 +99,6 @@ export class FieldRecorderModel extends Component {
 				}
 			}
 			return null;
-		});
-
-		this.inputSampleRates = computed(() => {
-			const input = this.activeInput.value;
-			const range = input?.getCapabilities().sampleRate;
-			if (!input || !range?.min || !range?.max) {
-				return [DEFAULT_SETTINGS.inputSettings.sampleRate];
-			}
-			return [range.min, range.max];
-		});
-
-		this.inputSampleSizes = computed(() => {
-			const input = this.activeInput.value;
-			const range = input?.getCapabilities().sampleSize;
-			if (!input || !range?.min || !range?.max) {
-				return [DEFAULT_SETTINGS.inputSettings.sampleSize];
-			}
-			return [range.min, range.max];
 		});
 	}
 

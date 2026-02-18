@@ -8,8 +8,6 @@ export type BitrateMode = "variable" | "constant";
 // TODO: Type check that this is compatible with MediaTrackConstraints?
 export type InputSettings = {
 	deviceId: string;
-	sampleRate: number;
-	sampleSize: number;
 	autoGainControl: boolean;
 	noiseSuppression: boolean;
 	voiceIsolation: boolean;
