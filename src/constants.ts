@@ -1,5 +1,4 @@
 import type {
-	BitrateMode,
 	GraphSettingKey,
 	GraphSettings,
 	InputSettingKey,
@@ -42,8 +41,8 @@ export const SUPPORTED_BITRATES: Record<string, string> = {
 	"128000": "128 kb/s", // medium-low
 	"160000": "160 kb/s", // medium
 	"192000": "192 kb/s", // medium-high
-	// "256": "256 kb/s", // high
-	// "320": "320 kb/s", // highest
+	"256000": "256 kb/s", // high
+	"320000": "320 kb/s", // highest
 };
 
 export const INPUT_SETTING_KEYS = [
@@ -55,12 +54,7 @@ export const INPUT_SETTING_KEYS = [
 
 export const GRAPH_SETTING_KEYS = ["monitor", "gain"] satisfies GraphSettingKey[];
 
-export const OUTPUT_SETTING_KEYS = [
-	"filename",
-	"mimeType",
-	"bitrate",
-	"bitrateMode",
-] satisfies OutputSettingKey[];
+export const OUTPUT_SETTING_KEYS = ["filename", "mimeType", "bitrate"] satisfies OutputSettingKey[];
 
 export const DEFAULT_SETTINGS = {
 	version: 1,
@@ -77,6 +71,5 @@ export const DEFAULT_SETTINGS = {
 		filename: "",
 		mimeType: SUPPORTED_MIME_TYPES.includes("audio/mp4") ? "audio/mp4" : SUPPORTED_MIME_TYPES[0],
 		bitrate: 192000,
-		bitrateMode: "variable" as BitrateMode,
 	} satisfies OutputSettings,
 } satisfies PluginSettingsStorageV1;

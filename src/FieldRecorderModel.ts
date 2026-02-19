@@ -85,7 +85,6 @@ export class FieldRecorderModel extends Component {
 					filename: false,
 					mimeType: state === "recording",
 					bitrate: state === "recording",
-					bitrateMode: state === "recording",
 				};
 			}),
 		};
@@ -176,7 +175,6 @@ export class FieldRecorderModel extends Component {
 		const outputSettings = this.settings.outputSettings.peek();
 		this.recorder = new MediaRecorder(this.graph.destination.stream, {
 			audioBitsPerSecond: outputSettings.bitrate,
-			audioBitrateMode: outputSettings.bitrateMode,
 			mimeType: outputSettings.mimeType,
 		});
 

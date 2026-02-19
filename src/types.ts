@@ -3,7 +3,6 @@ import type { Signal } from "@preact/signals-core";
 export type State = "off" | "idle" | "paused" | "recording";
 
 export type MimeType = "audio/mp4" | "audio/webm;codecs=opus" | "audio/webm;codecs=pcm";
-export type BitrateMode = "variable" | "constant";
 
 export type InputSettings = {
 	deviceId: string;
@@ -25,7 +24,6 @@ export type OutputSettings = {
 	filename: string;
 	mimeType: MimeType;
 	bitrate: number;
-	bitrateMode: BitrateMode;
 };
 
 export type OutputSettingKey = keyof OutputSettings;

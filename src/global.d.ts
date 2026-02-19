@@ -16,7 +16,7 @@ interface MediaRecorder {
 }
 
 interface MediaRecorderOptions {
-	audioBitrateMode: "variable" | "constant";
+	audioBitrateMode?: "variable" | "constant";
 }
 
 interface MediaTrackConstraints {
