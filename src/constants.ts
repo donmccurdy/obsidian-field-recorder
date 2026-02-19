@@ -35,6 +35,9 @@ export const SUPPORTED_MIME_TYPES = /* @__PURE__ */ (() => {
 	return supportedTypes as MimeType[];
 })();
 
+/** Raw formats are uncompressed, "bitrate" has no obvious effect on these. */
+export const RAW_MIME_TYPES = new Set<MimeType>(["audio/webm;codecs=pcm"]);
+
 export const SUPPORTED_BITRATES: Record<string, string> = {
 	"32000": "32 kb/s", // lowest
 	"96000": "96 kb/s", // low

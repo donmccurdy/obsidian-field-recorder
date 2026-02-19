@@ -1,7 +1,7 @@
 import { computed, effect, type Signal, signal } from "@preact/signals-core";
 import { Component } from "obsidian";
 import { AudioGraph } from "./AudioGraph";
-import { INPUT_SETTING_KEYS } from "./constants";
+import { INPUT_SETTING_KEYS, RAW_MIME_TYPES } from "./constants";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
 import { Timer } from "./Timer";
 import type { InputSettingKey, PluginSettings, PluginSettingsDisabled, State } from "./types";
@@ -81,10 +81,11 @@ export class FieldRecorderModel extends Component {
 
 			outputSettings: computed(() => {
 				const state = this.state.value;
+				const mimeType = this.settings.outputSettings.value.mimeType;
 				return {
 					filename: false,
 					mimeType: state === "recording",
-					bitrate: state === "recording",
+					bitrate: state === "recording" || RAW_MIME_TYPES.has(mimeType),
 				};
 			}),
 		};

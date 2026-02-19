@@ -216,8 +216,8 @@ export class FieldRecorderView extends ItemView {
 			this.ui.graphSettings.monitor = createSetting(el, "monitor", graphSettings);
 		}
 
-		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", outputSettings);
 		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", outputSettings);
+		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", outputSettings);
 
 		if (!Platform.isIosApp) {
 			this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", inputSettings);
