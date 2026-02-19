@@ -1,5 +1,5 @@
 import { WaveformView } from "WaveformView";
-import { computed, effect, type Signal } from "@preact/signals-core";
+import { computed, effect, type Signal, signal } from "@preact/signals-core";
 import {
 	type DropdownComponent,
 	ItemView,
@@ -28,6 +28,7 @@ type FieldRecorderViewProps = {
 export class FieldRecorderView extends ItemView {
 	private plugin: FieldRecorderPlugin;
 	private model: FieldRecorderModel;
+	private visible = signal(false);
 	private ui: {
 		inputSettings: Partial<Record<InputSettingKey, Setting>>;
 		graphSettings: Partial<Record<GraphSettingKey, Setting>>;
@@ -65,22 +66,30 @@ export class FieldRecorderView extends ItemView {
 	}
 
 	onload() {
+		// To avoid sending counter to -1, skip update on first effect run.
+		let creatingVisibleEffect = true;
+		this.register(
+			effect(() => {
+				const visible = this.visible.value;
+				const viewsVisible = this.plugin.viewsVisibleCount;
+				if (!creatingVisibleEffect) {
+					viewsVisible.value = viewsVisible.peek() + (visible ? +1 : -1);
+				}
+			}),
+		);
+		creatingVisibleEffect = false;
+
 		// Notify plugin when view visibility changes. Affected by right split and tab changes,
 		// and I'm not sure if Obsidian's API has events for these.
 		const observer = new IntersectionObserver((entries) => {
-			if (entries.some((entry) => entry.isIntersecting)) {
-				this.plugin.viewsVisibleCount.value++;
-			} else {
-				this.plugin.viewsVisibleCount.value--;
-			}
+			this.visible.value = entries.some((entry) => entry.isIntersecting);
 		});
 
 		observer.observe(this.containerEl);
 
 		this.register(() => {
-			// TODO(bug): Need to check that this view was previously visible.
-			this.plugin.viewsVisibleCount.value--;
 			observer.disconnect();
+			this.visible.value = false;
 		});
 
 		this.register(
