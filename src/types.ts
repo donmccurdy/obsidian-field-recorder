@@ -5,7 +5,6 @@ export type State = "off" | "idle" | "paused" | "recording";
 export type MimeType = "audio/mp4" | "audio/webm;codecs=opus" | "audio/webm;codecs=pcm";
 export type BitrateMode = "variable" | "constant";
 
-// TODO: Type check that this is compatible with MediaTrackConstraints?
 export type InputSettings = {
 	deviceId: string;
 	autoGainControl: boolean;
@@ -15,7 +14,6 @@ export type InputSettings = {
 
 export type InputSettingKey = keyof InputSettings;
 
-// TODO: Reverb, compression, ...
 export type GraphSettings = {
 	monitor: boolean;
 	gain: number;
@@ -46,9 +44,8 @@ export type PluginSettingsDisabled = {
 	outputSettings: Signal<Record<keyof OutputSettings, boolean>>;
 };
 
-// TODO: Versioning?
-// TODO: Keep settings in localstorage, or exclude 'deviceId'?
-export type PluginSettingsStorage = {
+export type PluginSettingsStorageV1 = {
+	version: 1;
 	inputSettings: Partial<InputSettings>;
 	graphSettings: Partial<GraphSettings>;
 	outputSettings: Partial<OutputSettings>;

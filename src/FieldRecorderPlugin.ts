@@ -9,7 +9,7 @@ import {
 	VIEW_TYPE_FIELD_RECORDER,
 } from "./constants";
 import { FieldRecorderView } from "./FieldRecorderView";
-import type { PluginSettings, PluginSettingsStorage, State } from "./types";
+import type { PluginSettings, PluginSettingsStorageV1, State } from "./types";
 import { detectPalette, frame, getDefaultFilename } from "./utils";
 
 export class FieldRecorderPlugin extends Plugin {
@@ -67,6 +67,7 @@ export class FieldRecorderPlugin extends Plugin {
 			effect(() => {
 				const settings = this.model.settings;
 				this.saveSettings({
+					version: 1,
 					inputSettings: settings.inputSettings.value,
 					graphSettings: settings.graphSettings.value,
 					outputSettings: settings.outputSettings.value,
@@ -143,12 +144,12 @@ export class FieldRecorderPlugin extends Plugin {
 		});
 	}
 
-	saveSettings(settings: PluginSettingsStorage): void {
+	saveSettings(settings: PluginSettingsStorageV1): void {
 		this.app.saveLocalStorage(LOCAL_STORAGE_KEY, settings);
 	}
 
 	loadSettings(): PluginSettings {
-		type Result = Partial<PluginSettingsStorage> | null;
+		type Result = Partial<PluginSettingsStorageV1> | null;
 		const saved = this.app.loadLocalStorage(LOCAL_STORAGE_KEY) as Result;
 
 		return {

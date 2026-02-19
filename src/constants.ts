@@ -7,7 +7,7 @@ import type {
 	MimeType,
 	OutputSettingKey,
 	OutputSettings,
-	PluginSettingsStorage,
+	PluginSettingsStorageV1,
 } from "./types";
 
 export const LOCAL_STORAGE_KEY = "field-recorder:settings";
@@ -63,6 +63,7 @@ export const OUTPUT_SETTING_KEYS = [
 ] satisfies OutputSettingKey[];
 
 export const DEFAULT_SETTINGS = {
+	version: 1,
 	inputSettings: {
 		deviceId: "default",
 		autoGainControl: true,
@@ -78,4 +79,4 @@ export const DEFAULT_SETTINGS = {
 		bitrate: 192000,
 		bitrateMode: "variable" as BitrateMode,
 	} satisfies OutputSettings,
-} satisfies PluginSettingsStorage;
+} satisfies PluginSettingsStorageV1;
