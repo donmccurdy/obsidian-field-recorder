@@ -1,4 +1,4 @@
-import { computed, effect, type Signal, signal } from "@preact/signals-core";
+import { batch, computed, effect, type Signal, signal } from "@preact/signals-core";
 import { Component } from "obsidian";
 import { AudioGraph } from "./AudioGraph";
 import { INPUT_SETTING_KEYS, RAW_MIME_TYPES } from "./constants";
@@ -105,11 +105,7 @@ export class FieldRecorderModel extends Component {
 	onload() {
 		this.register(
 			effect(() => {
-				const onDeviceChange = () => {
-					void this.getInputDevices().then((devices) => {
-						this.inputDevices.value = devices;
-					});
-				};
+				const onDeviceChange = () => void this._onDeviceChange();
 				navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
 				return () => navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange);
 			}),
@@ -234,6 +230,35 @@ export class FieldRecorderModel extends Component {
 		const chunks = await Promise.all(this.chunks);
 		await this.plugin.saveRecording(concat(chunks));
 		this.chunks.length = 0;
+	}
+
+	private async _onDeviceChange() {
+		const state = this.state.peek();
+		const deviceId = this.settings.inputSettings.peek().deviceId;
+
+		if (state === "off") {
+			return;
+		}
+
+		const inputDevices = await this.getInputDevices();
+		const inputDeviceIDs = new Set(inputDevices.map((d) => d.deviceId));
+
+		const lostDevice = this.graph!.stream.getAudioTracks().some((track) => {
+			const settings = track.getSettings();
+			return settings.deviceId && !inputDeviceIDs.has(settings.deviceId);
+		});
+
+		const gainedDevice = this.graph!.stream.getAudioTracks().some((track) => {
+			const settings = track.getSettings();
+			return settings.deviceId !== deviceId && inputDeviceIDs.has(deviceId);
+		});
+
+		if (lostDevice || (gainedDevice && state === "idle")) {
+			batch(() => {
+				this.inputDevices.value = inputDevices;
+				this.stopAll(); // Plugin will restart mic automatically.
+			});
+		}
 	}
 
 	onunload() {

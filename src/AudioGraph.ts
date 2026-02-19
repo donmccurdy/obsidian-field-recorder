@@ -19,7 +19,8 @@ export class AudioGraph extends Component {
 		const stream = await navigator.mediaDevices.getUserMedia({
 			video: false,
 			audio: {
-				deviceId: { exact: settings.deviceId },
+				// Settings UI falls back to the default device, let the stream do the same.
+				deviceId: { ideal: settings.deviceId },
 				autoGainControl: { exact: settings.autoGainControl },
 				noiseSuppression: { exact: settings.noiseSuppression },
 				voiceIsolation: { exact: settings.voiceIsolation },
