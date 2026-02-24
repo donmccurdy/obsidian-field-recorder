@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-field-recorder",
 	"version": "1.0.0",
-	"description": "Field audio recorder with extended audio quality settings and waveform visualization.",
+	"description": "Audio recorder with quality settings and waveform visualization.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
