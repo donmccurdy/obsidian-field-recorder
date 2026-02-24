@@ -20,7 +20,6 @@ export class FieldRecorderModel extends Component {
 	 * not return the full list until after getUserMedia() is called.
 	 */
 	public readonly inputDevices = signal<InputDeviceInfo[]>([]);
-	public readonly inputTrackSettings = signal<MediaTrackSettings[]>([]);
 
 	/** Selected audio input device. Device may remain selected if state='off'. */
 	public readonly activeInput: Signal<InputDeviceInfo | null>;
@@ -142,14 +141,11 @@ export class FieldRecorderModel extends Component {
 	async startMicrophone() {
 		const inputSettings = this.settings.inputSettings.peek();
 
-		// TODO: On iOS we can't get the device list until after calling getUserMedia. Which,
+		// On iOS we can't get the device list until after calling getUserMedia. Which,
 		// is frustrating, given we need to pass a deviceId _into_ getUserMedia. But OK.
 		this.inputDevices.value = await this.getInputDevices();
 		this.graph = this.addChild(await AudioGraph.createGraph(inputSettings));
 		this.inputDevices.value = await this.getInputDevices();
-		this.inputTrackSettings.value = this.graph.stream
-			.getAudioTracks()
-			.map((track) => track.getSettings());
 
 		this.state.value = "idle";
 	}
@@ -168,7 +164,6 @@ export class FieldRecorderModel extends Component {
 		assert(state.peek() === "idle" || state.peek() === "paused");
 		assert(this.graph);
 
-		// TODO: How does bitrate on the stream affect MediaRecorder quality?
 		const outputSettings = this.settings.outputSettings.peek();
 		this.recorder = new MediaRecorder(this.graph.destination.stream, {
 			audioBitsPerSecond: outputSettings.bitrate,
