@@ -47,6 +47,17 @@ export function formatDuration(ms: number): string {
 	return `${hh}:${mm}:${ss}.${cc}`;
 }
 
+export function formatBytes(bytes: number, decimals = 2): string {
+	if (bytes === 0) return "0 bytes";
+
+	const k = 1000;
+	const dm = decimals < 0 ? 0 : decimals;
+	const sizes = ["bytes", "KB", "MB", "GB", "TB"];
+
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
+}
+
 export function frame(fn: () => void): () => void {
 	let handle: number;
 	const animate = () => {

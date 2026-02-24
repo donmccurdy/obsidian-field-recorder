@@ -1,7 +1,7 @@
 import { batch, computed, effect, type Signal, signal } from "@preact/signals-core";
 import { Component } from "obsidian";
 import { AudioGraph } from "./AudioGraph";
-import { INPUT_SETTING_KEYS, RAW_MIME_TYPES } from "./constants";
+import { INPUT_SETTING_KEYS, RAW_MIME_TYPES, RECORDER_CHUNK_INTERVAL_MS } from "./constants";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
 import { Timer } from "./Timer";
 import type { InputSettingKey, PluginSettings, PluginSettingsDisabled, State } from "./types";
@@ -37,7 +37,10 @@ export class FieldRecorderModel extends Component {
 	public recorder: MediaRecorder | null = null;
 
 	private plugin: FieldRecorderPlugin;
+
 	private chunks: Promise<ArrayBuffer>[] = [];
+	private chunkByteLength = 0;
+
 	private subscriptions: (() => void)[] = [];
 
 	constructor(plugin: FieldRecorderPlugin, settings: PluginSettings) {
@@ -172,6 +175,8 @@ export class FieldRecorderModel extends Component {
 
 		this.recorder.addEventListener("dataavailable", (event) => {
 			this.chunks.push(event.data.arrayBuffer());
+			this.chunkByteLength += event.data.size;
+
 			// Use `event.target`, as `this.recorder` may already have been deleted.
 			if ((event.target as MediaRecorder).state === "inactive") {
 				void this._onRecordingEnd();
@@ -179,7 +184,7 @@ export class FieldRecorderModel extends Component {
 		});
 
 		if (state.peek() === "idle") {
-			this.recorder.start();
+			this.recorder.start(RECORDER_CHUNK_INTERVAL_MS);
 		} else {
 			this.recorder.resume();
 		}
@@ -221,10 +226,15 @@ export class FieldRecorderModel extends Component {
 		}
 	}
 
+	getRecordingByteLength(): number {
+		return this.chunkByteLength;
+	}
+
 	private async _onRecordingEnd() {
 		const chunks = await Promise.all(this.chunks);
 		await this.plugin.saveRecording(concat(chunks));
 		this.chunks.length = 0;
+		this.chunkByteLength = 0;
 	}
 
 	private async _onDeviceChange() {

@@ -76,3 +76,5 @@ export const DEFAULT_SETTINGS = {
 		bitrate: 192000,
 	} satisfies OutputSettings,
 } satisfies PluginSettingsStorageV1;
+
+export const RECORDER_CHUNK_INTERVAL_MS = 5000;

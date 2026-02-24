@@ -2,7 +2,7 @@ import type { Signal } from "@preact/signals-core";
 import { Component } from "obsidian";
 import type { AudioProcessor } from "./AudioProcessor";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
-import { formatDuration, type Palette } from "./utils";
+import { formatBytes, formatDuration, type Palette } from "./utils";
 
 const PAD = 4;
 
@@ -57,10 +57,13 @@ export class WaveformView extends Component {
 
 		// timestamp
 		if (state === "recording" || state === "paused") {
+			const byteLength = model.getRecordingByteLength();
 			const durationMs = model.timer.getDurationMs();
 			ctx.fillStyle = palette.fgColor;
-			ctx.textAlign = "right";
 			ctx.font = "12px monospace";
+			ctx.textAlign = "left";
+			ctx.fillText(formatBytes(byteLength, 1), PAD * 2, height - PAD * 2);
+			ctx.textAlign = "right";
 			ctx.fillText(formatDuration(durationMs), width - PAD * 2, height - PAD * 2);
 		}
 
