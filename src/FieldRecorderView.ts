@@ -154,7 +154,7 @@ export class FieldRecorderView extends ItemView {
 		containerEl.empty();
 
 		const recordSectionEl = containerEl.createEl("section", {
-			cls: ["fieldrec-section", "fieldrec-section-record"],
+			cls: ["fieldrec-section", "-record"],
 		});
 
 		const filenameEl = recordSectionEl.createEl("input", {
@@ -212,7 +212,7 @@ export class FieldRecorderView extends ItemView {
 		);
 
 		const settingsSectionEl = containerEl.createEl("section", {
-			cls: ["fieldrec-section", "fieldrec-section-settings"],
+			cls: ["fieldrec-section", "-settings"],
 		});
 
 		const el = settingsSectionEl;

@@ -1,10 +1,34 @@
+/******************************************************************************
+ * LAYOUT
+ */
+
 .fieldrec-view {
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
 }
 
-/* TODO: accent or yellow while monitoring, red with time while recording. */
+.fieldrec-section {
+	padding: var(--size-4-4);
+}
+
+.fieldrec-section.-record {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.fieldrec-section.-settings {
+	overflow: auto;
+	padding-bottom: var(--size-4-8);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/******************************************************************************
+ * STATUS BAR
+ */
+
 .status-bar-item.plugin-field-recorder {
 	background: var(--color-accent);
 	justify-content: center;
@@ -12,36 +36,58 @@
 	padding-right: 1em;
 }
 
-.fieldrec-status-bar-icon {
+.status-bar-item.plugin-field-recorder > .status-bar-item-icon {
 	color: var(--text-on-accent);
 }
 
-.fieldrec-section {
-	padding: var(--size-4-4);
-}
+/******************************************************************************
+ * RECORDER
+ */
 
-.fieldrec-section-record {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-start;
-	width: 100%;
-}
-
-.fieldrec-section-settings {
-	overflow: auto;
-	padding-bottom: var(--size-4-8);
-}
-
-.fieldrec-section-record > :not(:first-child) {
+.fieldrec-section.-record > :not(:first-child) {
 	margin: var(--size-4-2) 0;
 }
+
+.fieldrec-section.-record canvas {
+	width: 100%;
+	height: 150px;
+	image-rendering: pixelated;
+	border: var(--input-border-width) solid var(--background-modifier-border);
+	border-radius: calc(min(var(--input-radius), var(--input-height) / 2));
+}
+
+/******************************************************************************
+ * SETTINGS
+ */
 
 .fieldrec-section .setting-item.is-disabled {
 	opacity: 0.5;
 }
 
-.fieldrec-section + .fieldrec-section {
-	border-top: 1px solid var(--background-modifier-border);
+/** Prevent long select inputs from overflowing layout. */
+.fieldrec-setting-item.-wide {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.fieldrec-setting-item.-wide .setting-item-control,
+.fieldrec-setting-item.-wide .setting-item-control > select {
+	width: 100%;
+}
+
+/******************************************************************************
+ * BUTTONS
+ */
+
+.fieldrec-btn-row {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+}
+
+.fieldrec-btn-icon > svg {
+	stroke: #ffffff;
 }
 
 .fieldrec-btn-icon + .fieldrec-btn-icon {
@@ -68,33 +114,4 @@
 	background: var(--interactive-normal);
 	color: var(--text-faint);
 	opacity: 0.5;
-}
-
-.fieldrec-btn-icon > svg {
-	stroke: #ffffff;
-}
-
-.fieldrec-btn-row {
-	width: 100%;
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-}
-
-.fieldrec-section-record canvas {
-	width: 100%;
-	height: 150px;
-	image-rendering: pixelated;
-	border: var(--input-border-width) solid var(--background-modifier-border);
-	border-radius: calc(min(var(--input-radius), var(--input-height) / 2));
-}
-
-/** Prevent long select inputs from overflowing layout. */
-.fieldrec-setting-item.-wide {
-	flex-direction: column;
-	align-items: flex-start;
-}
-.fieldrec-setting-item.-wide .setting-item-control,
-.fieldrec-setting-item.-wide .setting-item-control > select {
-	width: 100%;
 }
