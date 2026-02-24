@@ -179,7 +179,7 @@ export class FieldRecorderView extends ItemView {
 		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
 
 		const recordBtnEl = btnRowEl.createEl("button", {
-			title: "Start",
+			title: "Record",
 			cls: ["fieldrec-btn-icon", "-record"],
 		});
 		setIcon(recordBtnEl, "mic");
