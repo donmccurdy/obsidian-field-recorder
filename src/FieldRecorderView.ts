@@ -147,7 +147,7 @@ export class FieldRecorderView extends ItemView {
 		this.waveformView!.update();
 	}
 
-	protected async onOpen(): Promise<void> {
+	protected async onOpen() {
 		const { state, model, containerEl } = this;
 
 		const { inputSettings, graphSettings, outputSettings } = state.settings;
@@ -239,14 +239,18 @@ export class FieldRecorderView extends ItemView {
 		}
 
 		this.state.viewsActive.value++;
+
+		await Promise.resolve(); // For ESLint.
 	}
 
-	async onClose(): Promise<void> {
+	async onClose() {
 		this.formSubscriptions.forEach((unsub) => void unsub());
 		this.formSubscriptions.length = 0;
 		if (this.waveformView) {
 			this.removeChild(this.waveformView);
 		}
 		this.state.viewsActive.value--;
+
+		await Promise.resolve(); // For ESLint.
 	}
 }

@@ -27,7 +27,7 @@ export class FieldRecorderPlugin extends Plugin {
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
 
-	async onload() {
+	onload() {
 		this.state = createState(this.loadSettings());
 		this.model = this.addChild(new FieldRecorderModel(this.state));
 		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", () =>
@@ -184,7 +184,7 @@ export class FieldRecorderPlugin extends Plugin {
 
 	private async _toggleView() {
 		if (this.state.viewsVisible.peek() > 0) {
-			await this._closeView();
+			this._closeView();
 		} else {
 			await this._openView();
 		}
@@ -197,7 +197,7 @@ export class FieldRecorderPlugin extends Plugin {
 		await this.app.workspace.ensureSideLeaf(VIEW_TYPE_FIELD_RECORDER, "right");
 	}
 
-	private async _closeView() {
+	private _closeView() {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
 	}
 
