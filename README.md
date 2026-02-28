@@ -2,7 +2,7 @@
 
 _Audio recorder with quality settings and waveform visualization. A plugin for [Obsidian.md](https://obsidian.md/)._
 
-![preview](https://github.com/user-attachments/assets/6225d3b9-c863-437c-9c29-5f7db7a50b2f)
+![preview](https://github.com/user-attachments/assets/13df10fd-d839-4035-840c-ad68d0f08364)
 
 ## Features
 
