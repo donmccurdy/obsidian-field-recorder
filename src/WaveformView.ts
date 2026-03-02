@@ -1,7 +1,6 @@
 import type { FieldRecorderState } from "FieldRecorderState";
 import { Component } from "obsidian";
 import { getSampleBinIndex } from "./utils/audio";
-import { formatBytes, formatDuration } from "./utils/format";
 
 const PAD = 4;
 
@@ -41,18 +40,6 @@ export class WaveformView extends Component {
 
 		if (mode === "off") {
 			return;
-		}
-
-		// text
-		if (mode === "record" || mode === "pause") {
-			const byteLength = state.byteLength.peek();
-			const durationMs = state.durationMs.peek();
-			ctx.fillStyle = theme.fgColor;
-			ctx.font = "12px monospace";
-			ctx.textAlign = "left";
-			ctx.fillText(formatBytes(byteLength, 1), PAD * 2, height - PAD * 2);
-			ctx.textAlign = "right";
-			ctx.fillText(formatDuration(durationMs), width - PAD * 2, height - PAD * 2);
 		}
 
 		// waveform

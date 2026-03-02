@@ -56,6 +56,25 @@
 	border-radius: calc(min(var(--input-radius), var(--input-height) / 2));
 }
 
+.fieldrec-waveform {
+	position: relative;
+}
+
+.fieldrec-waveform-label {
+	position: absolute;
+	bottom: var(--size-4-2);
+	font: 12px monospace;
+	color: var(--interactive-accent);
+}
+
+.fieldrec-waveform-label.-left {
+	left: var(--size-4-2);
+}
+
+.fieldrec-waveform-label.-right {
+	right: var(--size-4-2);
+}
+
 /******************************************************************************
  * SETTINGS
  */

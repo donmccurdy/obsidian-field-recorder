@@ -17,6 +17,7 @@ import {
 } from "./FieldRecorderSettings";
 import type { FieldRecorderState } from "./FieldRecorderState";
 import { getDefaultFilename } from "./utils/filesystem";
+import { formatBytes, formatDuration } from "./utils/format";
 import { WaveformView } from "./WaveformView";
 
 type FieldRecorderViewProps = {
@@ -24,17 +25,22 @@ type FieldRecorderViewProps = {
 	model: FieldRecorderModel;
 };
 
+type FieldRecorderViewUI = {
+	inputSettings: Partial<Record<keyof InputSettings, Setting>>;
+	graphSettings: Partial<Record<keyof GraphSettings, Setting>>;
+	outputSettings: Partial<Record<keyof OutputSettings, Setting>>;
+	durationEl?: HTMLSpanElement;
+	byteLengthEl?: HTMLSpanElement;
+	canvasEl?: HTMLCanvasElement;
+};
+
 export class FieldRecorderView extends ItemView {
 	private state: FieldRecorderState;
 	private model: FieldRecorderModel;
 	private visible = signal(false);
-	private ui: {
-		inputSettings: Partial<Record<keyof InputSettings, Setting>>;
-		graphSettings: Partial<Record<keyof GraphSettings, Setting>>;
-		outputSettings: Partial<Record<keyof OutputSettings, Setting>>;
-	} = { inputSettings: {}, graphSettings: {}, outputSettings: {} };
+	private ui: FieldRecorderViewUI = { inputSettings: {}, graphSettings: {}, outputSettings: {} };
 	private waveformView: WaveformView | null = null;
-	inputOptions: Signal<Record<string, string>>;
+	private inputOptions: Signal<Record<string, string>>;
 	private formSubscriptions: (() => void)[] = [];
 
 	constructor(leaf: WorkspaceLeaf, props: FieldRecorderViewProps) {
@@ -141,15 +147,31 @@ export class FieldRecorderView extends ItemView {
 				}
 			}),
 		);
+
+		this.register(
+			effect(() => {
+				const mode = this.state.mode.value;
+				const { durationEl, byteLengthEl } = this.ui;
+				if (!durationEl || !byteLengthEl || mode === "record" || mode === "pause") {
+					return;
+				}
+				durationEl.textContent = "";
+				byteLengthEl.textContent = "";
+			}),
+		);
 	}
 
 	update() {
+		const { mode, durationMs, byteLength } = this.state;
+		if (mode.peek() === "record") {
+			this.ui.durationEl!.textContent = formatDuration(durationMs.peek());
+			this.ui.byteLengthEl!.textContent = formatBytes(byteLength.peek());
+		}
 		this.waveformView!.update();
 	}
 
 	protected async onOpen() {
 		const { state, model, containerEl } = this;
-
 		const { inputSettings, graphSettings, outputSettings } = state.settings;
 
 		containerEl.toggleClass("fieldrec-view", true);
@@ -175,9 +197,12 @@ export class FieldRecorderView extends ItemView {
 			outputSettings.value = { ...outputSettings.peek(), filename };
 		});
 
-		const canvasEl = recordSectionEl.createEl("canvas", { attr: { width: 200, height: 100 } });
+		const figureEl = recordSectionEl.createEl("figure", { cls: "fieldrec-waveform" });
+		this.ui.canvasEl = figureEl.createEl("canvas", { attr: { width: 200, height: 100 } });
+		this.ui.byteLengthEl = figureEl.createSpan({ cls: ["fieldrec-waveform-label", "-left"] });
+		this.ui.durationEl = figureEl.createSpan({ cls: ["fieldrec-waveform-label", "-right"] });
 
-		this.waveformView = this.addChild(new WaveformView({ state, canvasEl }));
+		this.waveformView = this.addChild(new WaveformView({ state, canvasEl: this.ui.canvasEl }));
 
 		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
 
