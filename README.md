@@ -22,7 +22,7 @@ _Audio recorder with quality settings and waveform visualization. A plugin for [
 
 ## Installation
 
-The Field Recorder plugin has recently been submitted to the Obsidian plugin list, and is currently pending review. If you would like to beta test the plugin, before the official release becomes available, you may install the Field Recorder plugin using the [Beta Reviewers Auto-update Tool (BRAT)](https://tfthacker.com/BRAT).
+See: https://community.obsidian.md/plugins/field-recorder
 
 ## License
 
