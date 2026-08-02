@@ -126,6 +126,8 @@ export function createState(settings: FieldRecorderSettings): FieldRecorderState
 			const mimeType = settings.outputSettings.value.mimeType;
 			return {
 				filename: false,
+				prefixActiveFilename: false,
+				saveSubfolder: false,
 				mimeType: modeValue === "record",
 				bitrate: modeValue === "record" || RAW_MIME_TYPES.has(mimeType),
 			};

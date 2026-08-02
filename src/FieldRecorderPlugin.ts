@@ -1,5 +1,5 @@
 import { effect, signal } from "@preact/signals-core";
-import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
+import { MarkdownView, normalizePath, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import { LOCAL_STORAGE_KEY, MIME_TYPE_TO_EXTENSION, VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import { FieldRecorderModel } from "./FieldRecorderModel";
 import {
@@ -10,7 +10,7 @@ import {
 import { createState, type FieldRecorderState } from "./FieldRecorderState";
 import { FieldRecorderView } from "./FieldRecorderView";
 import type { Mode } from "./types";
-import { getDefaultFilename } from "./utils/filesystem";
+import { getAvailablePath, getDefaultFilename, ensureFolderExists } from "./utils/filesystem";
 import { frame } from "./utils/signals";
 import { getTheme } from "./utils/theme";
 
@@ -205,16 +205,42 @@ export class FieldRecorderPlugin extends Plugin {
 		const { workspace, vault, fileManager } = this.app;
 
 		const outputSettings = this.state.settings.outputSettings.peek();
-		const basename = outputSettings.filename || getDefaultFilename();
-		const filename = `${basename}.${MIME_TYPE_TO_EXTENSION[outputSettings.mimeType]}`;
-		const path = await fileManager.getAvailablePathForAttachment(filename);
-		const file = await vault.createBinary(path, data);
+		const extension = MIME_TYPE_TO_EXTENSION[outputSettings.mimeType];
 
 		const recentLeaf = workspace.getMostRecentLeaf();
-		if (recentLeaf && recentLeaf.view instanceof MarkdownView && recentLeaf.view.file) {
-			const recentFilePath = recentLeaf.view.file.path;
+		const recentMarkdownView = recentLeaf?.view instanceof MarkdownView ? recentLeaf.view : null;
+		const recentMarkdownFile = recentMarkdownView?.file ?? null;
+
+		let basename = outputSettings.filename || getDefaultFilename();
+		if (outputSettings.prefixActiveFilename && recentMarkdownFile) {
+			basename = `${recentMarkdownFile.basename} - ${basename}`;
+		}
+
+		const configuredSubfolder = outputSettings.saveSubfolder
+			.split("/")
+			.map((segment) => segment.trim())
+			.filter((segment) => segment.length > 0)
+			.join("/");
+
+		let path: string;
+		if (recentMarkdownFile) {
+			const activeFolder = recentMarkdownFile.parent?.path || "";
+			const folderPath = configuredSubfolder
+				? normalizePath(activeFolder ? `${activeFolder}/${configuredSubfolder}` : configuredSubfolder)
+				: activeFolder;
+
+			await ensureFolderExists(vault, folderPath);
+			path = getAvailablePath(vault, folderPath, basename, extension);
+		} else {
+			path = await fileManager.getAvailablePathForAttachment(`${basename}.${extension}`);
+		}
+
+		const file = await vault.createBinary(path, data);
+
+		if (recentMarkdownFile && recentMarkdownView) {
+			const recentFilePath = recentMarkdownFile.path;
 			const markdownLink = fileManager.generateMarkdownLink(file, recentFilePath);
-			recentLeaf.view.editor.replaceSelection(`!${markdownLink}`);
+			recentMarkdownView.editor.replaceSelection(`!${markdownLink}`);
 		} else {
 			await workspace.getLeaf(true).openFile(file);
 		}
