@@ -255,6 +255,8 @@ export class FieldRecorderView extends ItemView {
 
 		this.ui.outputSettings.mimeType = createSetting(el, "mimeType", outputSettings);
 		this.ui.outputSettings.bitrate = createSetting(el, "bitrate", outputSettings);
+		this.ui.outputSettings.saveSubfolder = createSetting(el, "saveSubfolder", outputSettings);
+		this.ui.outputSettings.prefixActiveFilename = createSetting(el, "prefixActiveFilename", outputSettings);
 
 		if (!Platform.isIosApp) {
 			this.ui.inputSettings.autoGainControl = createSetting(el, "autoGainControl", inputSettings);

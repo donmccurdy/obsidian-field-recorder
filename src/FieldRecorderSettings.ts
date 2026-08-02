@@ -20,6 +20,8 @@ export type GraphSettings = {
 
 export type OutputSettings = {
 	filename: string;
+	prefixActiveFilename: boolean;
+	saveSubfolder: string;
 	mimeType: MimeType;
 	bitrate: number;
 };
@@ -53,6 +55,8 @@ export const GRAPH_SETTING_KEYS = ["monitor", "gain"] satisfies (keyof GraphSett
 
 export const OUTPUT_SETTING_KEYS = [
 	"filename",
+	"prefixActiveFilename",
+	"saveSubfolder",
 	"mimeType",
 	"bitrate",
 ] satisfies (keyof OutputSettings)[];
@@ -73,6 +77,8 @@ export const DEFAULT_SETTINGS = {
 
 	outputSettings: {
 		filename: "",
+		prefixActiveFilename: false,
+		saveSubfolder: "",
 		mimeType: SUPPORTED_MIME_TYPES.includes("audio/mp4") ? "audio/mp4" : SUPPORTED_MIME_TYPES[0],
 		bitrate: 192000,
 	} satisfies OutputSettings,
@@ -81,7 +87,7 @@ export const DEFAULT_SETTINGS = {
 ///////////////////////////////////////////////////////////////////////////////
 // CONFIGS
 
-type SettingComponentType = "toggle" | "slider" | "dropdown";
+type SettingComponentType = "toggle" | "slider" | "dropdown" | "text";
 
 type SettingConfig = {
 	name: string;
@@ -91,6 +97,7 @@ type SettingConfig = {
 	limits?: [number, number, number];
 	cls?: string[];
 	transform?: [(src: unknown) => string, (enc: string) => unknown];
+	placeholder?: string;
 };
 
 type SettingKey = keyof InputSettings | keyof GraphSettings | keyof OutputSettings;
@@ -111,6 +118,18 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 		type: "dropdown",
 		options: SUPPORTED_BITRATES,
 		transform: [String, Number],
+	},
+	saveSubfolder: {
+		name: "Save in subfolder",
+		desc: "Relative to active note folder. Example: Recordings/Field",
+		type: "text",
+		cls: ["-wide"],
+		placeholder: "(same folder as active note)",
+	},
+	prefixActiveFilename: {
+		name: "Prefix filename with note title",
+		desc: "Prepend the active note's name to the recording filename.",
+		type: "toggle",
 	},
 	mimeType: {
 		name: "Format",
@@ -199,6 +218,18 @@ export function createSetting<K extends SettingKey>(
 						signal.value = { ...signal.peek(), [id]: tOut(value) };
 					});
 			});
+			break;
+
+		case "text":
+			setting.addText((text) =>
+				text
+					.setValue((signal.peek()[id] as string) || "")
+					.setPlaceholder(config.placeholder ?? "")
+					.setDisabled(true)
+					.onChange((value) => {
+						signal.value = { ...signal.peek(), [id]: value };
+					}),
+			);
 			break;
 
 		default:
