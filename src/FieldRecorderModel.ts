@@ -122,7 +122,7 @@ export class FieldRecorderModel extends Component {
 
 		mode.value = "record";
 
-		this._acquireWakeLock();
+		void this._acquireWakeLock();
 	}
 
 	pauseRecording() {
@@ -145,7 +145,7 @@ export class FieldRecorderModel extends Component {
 
 		mode.value = "monitor";
 
-		this._releaseWakeLock();
+		void this._releaseWakeLock();
 	}
 
 	stopAll() {
@@ -221,7 +221,7 @@ export class FieldRecorderModel extends Component {
 
 		try {
 			this.wakeLock = await navigator.wakeLock.request("screen");
-			this.wakeLock.addEventListener("release", ()=> {
+			this.wakeLock.addEventListener("release", () => {
 				this.wakeLock = null;
 			});
 		} catch {
