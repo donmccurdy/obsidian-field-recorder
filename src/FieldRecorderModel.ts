@@ -19,8 +19,6 @@ export class FieldRecorderModel extends Component {
 	private chunkCallbacks: ((bytes: Uint8Array) => Promise<void>)[] = [];
 	private chunkByteLength = 0;
 
-	private wakeLock: WakeLockSentinel | null = null;
-
 	constructor(state: FieldRecorderState) {
 		super();
 		this.state = state;
@@ -121,8 +119,6 @@ export class FieldRecorderModel extends Component {
 		this.timer.start();
 
 		mode.value = "record";
-
-		void this._acquireWakeLock();
 	}
 
 	pauseRecording() {
@@ -144,8 +140,6 @@ export class FieldRecorderModel extends Component {
 		this.timer.stop();
 
 		mode.value = "monitor";
-
-		void this._releaseWakeLock();
 	}
 
 	stopAll() {
@@ -214,25 +208,5 @@ export class FieldRecorderModel extends Component {
 
 	onunload() {
 		this.stopAll();
-	}
-
-	private async _acquireWakeLock() {
-		if (!("wakeLock" in navigator) || this.wakeLock) return;
-
-		try {
-			this.wakeLock = await navigator.wakeLock.request("screen");
-			this.wakeLock.addEventListener("release", () => {
-				this.wakeLock = null;
-			});
-		} catch {
-			// Permission denied, unsupported, ...
-			// Fail silently so that recording still works
-		}
-	}
-
-	private async _releaseWakeLock() {
-		if (this.wakeLock) {
-			await this.wakeLock.release();
-		}
 	}
 }

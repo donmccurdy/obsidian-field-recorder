@@ -24,6 +24,7 @@ import { getTheme } from "./utils/theme";
 export class FieldRecorderPlugin extends Plugin {
 	state: FieldRecorderState;
 	model: FieldRecorderModel;
+	wakeLock: WakeLockSentinel | null = null;
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
 
@@ -109,6 +110,7 @@ export class FieldRecorderPlugin extends Plugin {
 		this.register(() => model.removeEventListener("dataavailable", onDataAvailable));
 
 		this.register(effect(() => this._updateMicIndicator(this.state.mode.value)));
+		this.register(effect(() => void this._updateWakeLock(this.state.mode.value)));
 
 		this.register(
 			effect(() => {
@@ -231,6 +233,23 @@ export class FieldRecorderPlugin extends Plugin {
 		} else if (this.statusBarItemEl) {
 			this.statusBarItemEl.remove();
 			this.statusBarItemEl = null;
+		}
+	}
+
+	private async _updateWakeLock(mode: Mode) {
+		if (!("wakeLock" in navigator)) return;
+
+		if (mode === "record" && !this.wakeLock) {
+			try {
+				this.wakeLock = await navigator.wakeLock.request("screen");
+				this.wakeLock.addEventListener("release", () => {
+					this.wakeLock = null;
+				});
+			} catch {
+				// Permission denied; fail silently and allow recording.
+			}
+		} else if (mode !== "record" && this.wakeLock) {
+			await this.wakeLock.release();
 		}
 	}
 }
