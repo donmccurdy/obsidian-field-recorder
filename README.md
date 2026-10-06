@@ -34,3 +34,5 @@ Field Recorder plugin source code is [dual-licensed](https://writing.kemitchell.
 If you choose the Big Time Public License, and are subject to its requirements for big businesses, the paid license is available (without further payment) upon providing evidence that the business is (A) a member of the [Open Source Pledge](https://opensourcepledge.com/), or (B) a subscriber to Tidelift. There is no requirement or expectation that funds from either program be distributed to the Field Recorder plugin authors.
 
 All contributors must agree to and sign the _[Tiny Contributor License Agreement 1.0.0](https://indieopensource.com/forms/cla.html)_. If you are uncertain of the purpose or need for a CLA in dual-licensed projects, please see _[Contributing to Public-Private Licensing Projects](https://indieopensource.com/public-private/contributors)_.
+
+_P.S. If you are on the Obsidian team and want to use this code to improve the core Audio Recorder plugin, but the license is an obstacle: please reach out, I'd love to make that possible._
