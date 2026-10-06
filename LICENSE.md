@@ -6,3 +6,5 @@ Field Recorder plugin source code is [dual-licensed](https://writing.kemitchell.
 - [Big Time Public License](./LICENSE_BIGTIME.md): Allows you to use and share this software for noncommercial purposes and in small business for free, while also guaranteeing that paid licenses for big businesses will be available on fair, reasonable, and nondiscriminatory terms.
 
 If you choose the Big Time Public License, and are subject to its requirements for big businesses, the paid license is available (without further payment) upon providing evidence that the business is (A) a member of the [Open Source Pledge](https://opensourcepledge.com/), or (B) a subscriber to Tidelift. There is no requirement or expectation that funds from either program be distributed to the Field Recorder plugin authors.
+
+_P.S. If you are on the Obsidian team and want to use this code to improve the core Audio Recorder plugin, but the license is an obstacle: please reach out, I'd love to make that possible._
