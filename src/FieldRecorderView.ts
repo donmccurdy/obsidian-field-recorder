@@ -31,6 +31,7 @@ type FieldRecorderViewUI = {
 	outputSettings: Partial<Record<keyof OutputSettings, Setting>>;
 	durationEl?: HTMLSpanElement;
 	byteLengthEl?: HTMLSpanElement;
+	filenameEl?: HTMLInputElement;
 	canvasEl?: HTMLCanvasElement;
 };
 
@@ -159,6 +160,19 @@ export class FieldRecorderView extends ItemView {
 				byteLengthEl.textContent = "";
 			}),
 		);
+
+		// Filename placeholder may include a timestamp; update 1x/minute.
+		this.register(
+			(() => {
+				const intervalId = setInterval(() => {
+					const { filenameEl } = this.ui;
+					if (filenameEl) {
+						filenameEl.placeholder = getDefaultFilename();
+					}
+				}, 60 * 1000);
+				return () => clearInterval(intervalId);
+			})(),
+		);
 	}
 
 	update() {
@@ -181,8 +195,7 @@ export class FieldRecorderView extends ItemView {
 			cls: ["fieldrec-section", "-record"],
 		});
 
-		// TODO: Default filename (date) could change while plugin is open?
-		const filenameEl = recordSectionEl.createEl("input", {
+		this.ui.filenameEl = recordSectionEl.createEl("input", {
 			value: outputSettings.peek().filename,
 			placeholder: getDefaultFilename(),
 			cls: "fieldrec-input",
@@ -192,8 +205,8 @@ export class FieldRecorderView extends ItemView {
 			},
 		});
 
-		filenameEl.addEventListener("change", () => {
-			const filename = filenameEl.value;
+		this.ui.filenameEl.addEventListener("change", () => {
+			const filename = this.ui.filenameEl!.value;
 			outputSettings.value = { ...outputSettings.peek(), filename };
 		});
 
