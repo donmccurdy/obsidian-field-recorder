@@ -2,13 +2,16 @@ import { effect, signal } from "@preact/signals-core";
 import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
 import { LOCAL_STORAGE_KEY, MIME_TYPE_TO_EXTENSION, VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import { FieldRecorderModel } from "./FieldRecorderModel";
+import { FieldRecorderSettingTab } from "./FieldRecorderSettingTab";
+import { createState, type FieldRecorderState } from "./FieldRecorderState";
+import { FieldRecorderView } from "./FieldRecorderView";
 import {
 	DEFAULT_SETTINGS,
 	type FieldRecorderSettings,
-	type FieldRecorderSettingsPersistentV1,
-} from "./FieldRecorderSettings";
-import { createState, type FieldRecorderState } from "./FieldRecorderState";
-import { FieldRecorderView } from "./FieldRecorderView";
+	type FieldRecorderSettingsFileStorage,
+	type FieldRecorderSettingsLocalStorage,
+	type FieldRecorderSettingsValues,
+} from "./settings";
 import type { Mode } from "./types";
 import { getDefaultFilename } from "./utils/filesystem";
 import { frame } from "./utils/signals";
@@ -41,6 +44,8 @@ export class FieldRecorderPlugin extends Plugin {
 			const { state, model } = this;
 			return new FieldRecorderView(leaf, { state, model });
 		});
+
+		this.addSettingTab(new FieldRecorderSettingTab(this.app, this));
 	}
 
 	update() {
@@ -138,8 +143,8 @@ export class FieldRecorderPlugin extends Plugin {
 		this.register(
 			effect(() => {
 				const settings = this.state.settings;
-				this.saveSettings({
-					version: 1,
+				void this.saveSettings({
+					pluginSettings: settings.pluginSettings.value,
 					inputSettings: settings.inputSettings.value,
 					graphSettings: settings.graphSettings.value,
 					outputSettings: settings.outputSettings.value,
@@ -156,31 +161,51 @@ export class FieldRecorderPlugin extends Plugin {
 		this.register(frame(() => this.update()));
 	}
 
-	saveSettings(settings: FieldRecorderSettingsPersistentV1): void {
-		this.app.saveLocalStorage(LOCAL_STORAGE_KEY, settings);
+	async saveSettings(settings: FieldRecorderSettingsValues): Promise<void> {
+		const { pluginSettings, inputSettings, graphSettings, outputSettings } = settings;
+
+		await this.saveData({
+			version: 1,
+			pluginSettings,
+		} satisfies FieldRecorderSettingsFileStorage);
+
+		this.app.saveLocalStorage(LOCAL_STORAGE_KEY, {
+			version: 1,
+			inputSettings,
+			graphSettings,
+			outputSettings,
+		} satisfies FieldRecorderSettingsLocalStorage);
 	}
 
 	loadSettings(): FieldRecorderSettings {
-		type Result = Partial<FieldRecorderSettingsPersistentV1> | null;
-		const saved = this.app.loadLocalStorage(LOCAL_STORAGE_KEY) as Result;
+		const file = this.loadData() as Partial<FieldRecorderSettingsFileStorage> | null;
+
+		const local = this.app.loadLocalStorage(
+			LOCAL_STORAGE_KEY,
+		) as Partial<FieldRecorderSettingsLocalStorage> | null;
 
 		return {
+			pluginSettings: signal({
+				...DEFAULT_SETTINGS.pluginSettings,
+				...file,
+			}),
 			inputSettings: signal({
 				...DEFAULT_SETTINGS.inputSettings,
-				...saved?.inputSettings,
+				...local?.inputSettings,
 			}),
 			graphSettings: signal({
 				...DEFAULT_SETTINGS.graphSettings,
-				...saved?.graphSettings,
+				...local?.graphSettings,
 			}),
 			outputSettings: signal({
 				...DEFAULT_SETTINGS.outputSettings,
-				...saved?.outputSettings,
+				...local?.outputSettings,
 			}),
 		};
 	}
 
-	clearSettings(): void {
+	async clearSettings(): Promise<void> {
+		await this.saveData(null);
 		this.app.saveLocalStorage(LOCAL_STORAGE_KEY, null);
 	}
 

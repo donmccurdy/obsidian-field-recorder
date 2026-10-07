@@ -2,7 +2,7 @@
 	"id": "field-recorder",
 	"name": "Field Recorder",
 	"version": "1.0.0",
-	"minAppVersion": "1.11.4",
+	"minAppVersion": "1.13.0",
 	"description": "Audio recorder with quality settings and waveform visualization.",
 	"author": "Don McCurdy",
 	"authorUrl": "https://www.donmccurdy.com/",

@@ -1,5 +1,5 @@
 import { Component } from "obsidian";
-import type { InputSettings } from "./FieldRecorderSettings";
+import type { InputSettings } from "./settings";
 
 /**
  * AudioContext and associated audio nodes, meant to be destroyed and rebuilt

@@ -5,7 +5,7 @@ import type {
 	GraphSettings,
 	InputSettings,
 	OutputSettings,
-} from "./FieldRecorderSettings";
+} from "./settings";
 import type { Mode, SampleWindow, Theme } from "./types";
 import { getTheme } from "./utils/theme";
 

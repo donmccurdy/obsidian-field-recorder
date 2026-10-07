@@ -9,13 +9,9 @@ import {
 } from "obsidian";
 import { VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import type { FieldRecorderModel } from "./FieldRecorderModel";
-import {
-	createSetting,
-	type GraphSettings,
-	type InputSettings,
-	type OutputSettings,
-} from "./FieldRecorderSettings";
 import type { FieldRecorderState } from "./FieldRecorderState";
+import { createSetting } from "./FieldRecorderViewSettings";
+import type { GraphSettings, InputSettings, OutputSettings } from "./settings";
 import { getDefaultFilename } from "./utils/filesystem";
 import { formatBytes, formatDuration } from "./utils/format";
 import { WaveformView } from "./WaveformView";
