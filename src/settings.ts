@@ -98,3 +98,5 @@ export const DEFAULT_SETTINGS = {
 		bitrate: 192000,
 	} satisfies OutputSettings,
 } satisfies FieldRecorderSettingsValues;
+
+export const DEFAULT_FILENAME_TEMPLATE = "{{YYYY-MM-DD}} Recording";

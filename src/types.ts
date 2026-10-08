@@ -2,7 +2,7 @@ export type Mode = "off" | "monitor" | "pause" | "record";
 
 export type MimeType = "audio/mp4" | "audio/webm;codecs=opus" | "audio/webm;codecs=pcm";
 
-export type EmbedPosition = "cursor" | "top" | "bottom";
+export type EmbedPosition = "cursor" | "start" | "end";
 
 export type Theme = {
 	fgColor: string;

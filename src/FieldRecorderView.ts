@@ -157,17 +157,16 @@ export class FieldRecorderView extends ItemView {
 			}),
 		);
 
-		// Filename placeholder may include a timestamp; update 1x/minute.
 		this.register(
-			(() => {
-				const intervalId = setInterval(() => {
-					const { filenameEl } = this.ui;
-					if (filenameEl) {
-						filenameEl.placeholder = getDefaultFilename();
-					}
-				}, 60 * 1000);
-				return () => clearInterval(intervalId);
-			})(),
+			effect(() => {
+				const visible = this.visible.value; // Refresh date on visibility change.
+				const { filenameTemplate } = this.state.settings.pluginSettings.value;
+				const { filenameEl } = this.ui;
+
+				if (filenameEl && visible) {
+					filenameEl.placeholder = getDefaultFilename(filenameTemplate);
+				}
+			}),
 		);
 	}
 
@@ -182,7 +181,7 @@ export class FieldRecorderView extends ItemView {
 
 	protected async onOpen() {
 		const { state, model, containerEl } = this;
-		const { inputSettings, graphSettings, outputSettings } = state.settings;
+		const { pluginSettings, inputSettings, graphSettings, outputSettings } = state.settings;
 
 		containerEl.toggleClass("fieldrec-view", true);
 		containerEl.empty();
@@ -193,7 +192,7 @@ export class FieldRecorderView extends ItemView {
 
 		this.ui.filenameEl = recordSectionEl.createEl("input", {
 			value: outputSettings.peek().filename,
-			placeholder: getDefaultFilename(),
+			placeholder: getDefaultFilename(pluginSettings.peek().filenameTemplate),
 			cls: "fieldrec-input",
 			attr: {
 				type: "text",

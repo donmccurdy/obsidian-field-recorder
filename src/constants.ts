@@ -60,5 +60,3 @@ export const DEFAULT_SAMPLE_WINDOW: SampleWindow = Object.freeze({
 	sampleLevels: new Float32Array(SAMPLE_BIN_COUNT),
 	sampleClips: new Uint8Array(SAMPLE_BIN_COUNT),
 });
-
-export const DEFAULT_FILENAME_TEMPLATE = "{{YYYY-MM-DD}} Recording";

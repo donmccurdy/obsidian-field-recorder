@@ -1,5 +1,13 @@
 import { effect, signal } from "@preact/signals-core";
-import { MarkdownView, Plugin, setIcon, type WorkspaceLeaf } from "obsidian";
+import {
+	MarkdownView,
+	Plugin,
+	setIcon,
+	type TFile,
+	type Workspace,
+	type WorkspaceLeaf,
+} from "obsidian";
+import { getDefaultFilename } from "utils/filesystem";
 import { LOCAL_STORAGE_KEY, MIME_TYPE_TO_EXTENSION, VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import { FieldRecorderModel } from "./FieldRecorderModel";
 import { FieldRecorderSettingTab } from "./FieldRecorderSettingTab";
@@ -13,7 +21,6 @@ import {
 	type FieldRecorderSettingsValues,
 } from "./settings";
 import type { Mode } from "./types";
-import { getDefaultFilename } from "./utils/filesystem";
 import { frame } from "./utils/signals";
 import { getTheme } from "./utils/theme";
 
@@ -229,21 +236,47 @@ export class FieldRecorderPlugin extends Plugin {
 	}
 
 	async saveRecording(data: Uint8Array) {
-		const { workspace, vault, fileManager } = this.app;
+		const { vault, fileManager } = this.app;
 
+		const { filenameTemplate } = this.state.settings.pluginSettings.peek();
 		const outputSettings = this.state.settings.outputSettings.peek();
-		const basename = outputSettings.filename || getDefaultFilename();
+
+		const basename = outputSettings.filename || getDefaultFilename(filenameTemplate);
 		const filename = `${basename}.${MIME_TYPE_TO_EXTENSION[outputSettings.mimeType]}`;
 		const path = await fileManager.getAvailablePathForAttachment(filename);
 		const file = await vault.createBinary(path, data);
 
-		const recentLeaf = workspace.getMostRecentLeaf();
-		if (recentLeaf && recentLeaf.view instanceof MarkdownView && recentLeaf.view.file) {
-			const recentFilePath = recentLeaf.view.file.path;
-			const markdownLink = fileManager.generateMarkdownLink(file, recentFilePath);
-			recentLeaf.view.editor.replaceSelection(`!${markdownLink}`);
-		} else {
-			await workspace.getLeaf(true).openFile(file);
+		this.showRecording(file);
+	}
+
+	showRecording(file: TFile): void {
+		const { workspace, fileManager } = this.app;
+		const { embedPosition } = this.state.settings.pluginSettings.peek();
+
+		const activeView = getActiveMarkdownView(this.app.workspace);
+
+		if (!activeView?.file) {
+			void workspace.getLeaf(true).openFile(file);
+			return;
+		}
+
+		const markdownLink = fileManager.generateMarkdownLink(file, activeView.file.path);
+
+		switch (embedPosition) {
+			case "cursor":
+				activeView.editor.replaceRange(`!${markdownLink}`, activeView.editor.getCursor());
+				break;
+
+			case "start":
+				activeView.editor.replaceRange(`!${markdownLink}\n`, { line: 0, ch: 0 });
+				break;
+
+			case "end":
+				activeView.editor.replaceRange(`\n!${markdownLink}`, {
+					line: activeView.editor.lastLine(),
+					ch: activeView.editor.getLine(activeView.editor.lastLine()).length,
+				});
+				break;
 		}
 	}
 
@@ -277,4 +310,12 @@ export class FieldRecorderPlugin extends Plugin {
 			await this.wakeLock.release();
 		}
 	}
+}
+
+function getActiveMarkdownView(workspace: Workspace): MarkdownView | null {
+	const leaf = workspace.getMostRecentLeaf();
+	if (leaf && leaf.view instanceof MarkdownView && leaf.view.file) {
+		return leaf.view;
+	}
+	return null;
 }

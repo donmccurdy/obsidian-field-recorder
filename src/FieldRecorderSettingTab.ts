@@ -1,7 +1,11 @@
-import { type App, PluginSettingTab, type SettingDefinitionItem } from "obsidian";
-import { DEFAULT_FILENAME_TEMPLATE } from "./constants";
+import {
+	type App,
+	PluginSettingTab,
+	type SettingDefinitionItem,
+	sanitizeHTMLToDom,
+} from "obsidian";
 import type { FieldRecorderPlugin } from "./FieldRecorderPlugin";
-import { DEFAULT_SETTINGS, type PluginSettings } from "./settings";
+import { DEFAULT_FILENAME_TEMPLATE, DEFAULT_SETTINGS, type PluginSettings } from "./settings";
 import type { EmbedPosition } from "./types";
 
 export class FieldRecorderSettingTab extends PluginSettingTab {
@@ -26,7 +30,10 @@ export class FieldRecorderSettingTab extends PluginSettingTab {
 		return [
 			{
 				name: "Default filename for new recordings",
-				desc: "Accepts a date format, like {{YYYY-MM-DD}}, or {{NOTE}} for title of the current note.",
+				desc: sanitizeHTMLToDom(
+					"Accepts date formats, like {{YYYY-MM-DD}}. See" +
+						` <a href="https://momentjs.com/docs/#/displaying/format/">format reference</a>.`,
+				),
 				control: {
 					type: "text",
 					key: "filenameTemplate" satisfies keyof PluginSettings,
@@ -42,17 +49,15 @@ export class FieldRecorderSettingTab extends PluginSettingTab {
 			},
 			{
 				name: "Embed position for new recordings",
-				desc:
-					"New recordings may be embedded at the top or bottom " +
-					" of the current note, or at the cursor position.",
+				desc: "New recordings are embedded in the current note at the start, end, or cursor position.",
 				control: {
 					type: "dropdown",
 					key: "embedPosition" satisfies keyof PluginSettings,
 					defaultValue: DEFAULT_SETTINGS.pluginSettings.embedPosition,
 					options: {
 						cursor: "Cursor",
-						top: "Top",
-						bottom: "Bottom",
+						start: "Start",
+						end: "End",
 					} satisfies Record<EmbedPosition, string>,
 				},
 			},
