@@ -127,8 +127,8 @@ export class FieldRecorderPlugin extends Plugin {
 		this.register(
 			effect(() => {
 				const mode = this.state.mode.value;
-				const isViewActive = this.state.viewsActive.value > 0;
-				const isViewVisible = this.state.viewsVisible.value > 0;
+				const isViewActive = this.state.viewsActiveDebounced.value > 0;
+				const isViewVisible = this.state.viewsVisibleDebounced.value > 0;
 
 				// View has just opened or come into view. Start the mic.
 				if (isViewActive && isViewVisible && mode === "off") {

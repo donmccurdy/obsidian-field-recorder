@@ -1,4 +1,6 @@
 import { computed, type Signal, signal } from "@preact/signals-core";
+import { Platform } from "obsidian";
+import { debounceSignal } from "utils/debounceSignal";
 import { DEFAULT_SAMPLE_WINDOW, RAW_MIME_TYPES } from "./constants";
 import type {
 	FieldRecorderSettings,
@@ -8,6 +10,9 @@ import type {
 } from "./settings";
 import type { Mode, SampleWindow, Theme } from "./types";
 import { getTheme } from "./utils/theme";
+
+// See: https://github.com/donmccurdy/obsidian-field-recorder/issues/9
+const VIEW_DEBOUNCE_MS = Platform.isIosApp ? 400 : 0;
 
 export type FieldRecorderState = Readonly<{
 	/**
@@ -24,9 +29,11 @@ export type FieldRecorderState = Readonly<{
 
 	/** Number of visible plugin views. */
 	viewsVisible: Signal<number>;
+	viewsVisibleDebounced: Signal<number>;
 
 	/** Number of active plugin views, must be >=viewsVisibleCount. */
 	viewsActive: Signal<number>;
+	viewsActiveDebounced: Signal<number>;
 
 	/** When recording, the current recording's length in bytes. Default 0. */
 	byteLength: Signal<number>;
@@ -70,7 +77,9 @@ export function createState(settings: FieldRecorderSettings): FieldRecorderState
 	const mode = signal<Mode>("off");
 	const theme = signal(getTheme(document.body));
 	const viewsVisible = signal(0);
+	const viewsVisibleDebounced = debounceSignal(viewsVisible, VIEW_DEBOUNCE_MS);
 	const viewsActive = signal(0);
+	const viewsActiveDebounced = debounceSignal(viewsActive, VIEW_DEBOUNCE_MS);
 	const byteLength = signal(0);
 	const durationMs = signal(0);
 
@@ -136,7 +145,9 @@ export function createState(settings: FieldRecorderSettings): FieldRecorderState
 		mode,
 		theme,
 		viewsVisible,
+		viewsVisibleDebounced,
 		viewsActive,
+		viewsActiveDebounced,
 		byteLength,
 		durationMs,
 		timeDomainData,
