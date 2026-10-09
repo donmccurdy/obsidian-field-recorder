@@ -27,6 +27,6 @@
 	},
 	"dependencies": {
 		"@preact/signals-core": "^1.12.2",
-		"obsidian": "^1.13.1"
+		"obsidian": "latest"
 	}
 }
