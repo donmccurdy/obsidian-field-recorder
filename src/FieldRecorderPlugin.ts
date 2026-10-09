@@ -38,8 +38,8 @@ export class FieldRecorderPlugin extends Plugin {
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
 
-	onload() {
-		this.state = createState(this.loadSettings());
+	async onload() {
+		this.state = createState(await this.loadSettings());
 		this.model = this.addChild(new FieldRecorderModel(this.state));
 		this.ribbonIconEl = this.addRibbonIcon("mic", "Open/close field recorder", () =>
 			this._toggleView(),
@@ -184,29 +184,29 @@ export class FieldRecorderPlugin extends Plugin {
 		} satisfies FieldRecorderSettingsLocalStorage);
 	}
 
-	loadSettings(): FieldRecorderSettings {
-		const file = this.loadData() as Partial<FieldRecorderSettingsFileStorage> | null;
+	async loadSettings(): Promise<FieldRecorderSettings> {
+		type FileStorageResult = Partial<FieldRecorderSettingsFileStorage> | null;
+		type LocalStorageResult = Partial<FieldRecorderSettingsLocalStorage> | null;
 
-		const local = this.app.loadLocalStorage(
-			LOCAL_STORAGE_KEY,
-		) as Partial<FieldRecorderSettingsLocalStorage> | null;
+		const fileData = (await this.loadData()) as FileStorageResult;
+		const localData = this.app.loadLocalStorage(LOCAL_STORAGE_KEY) as LocalStorageResult;
 
 		return {
 			pluginSettings: signal({
 				...DEFAULT_SETTINGS.pluginSettings,
-				...file,
+				...fileData?.pluginSettings,
 			}),
 			inputSettings: signal({
 				...DEFAULT_SETTINGS.inputSettings,
-				...local?.inputSettings,
+				...localData?.inputSettings,
 			}),
 			graphSettings: signal({
 				...DEFAULT_SETTINGS.graphSettings,
-				...local?.graphSettings,
+				...localData?.graphSettings,
 			}),
 			outputSettings: signal({
 				...DEFAULT_SETTINGS.outputSettings,
-				...local?.outputSettings,
+				...localData?.outputSettings,
 			}),
 		};
 	}
