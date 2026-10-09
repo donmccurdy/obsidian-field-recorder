@@ -1,9 +1,9 @@
-import { effect, type Signal, signal } from "@preact/signals-core";
+import { effect, type ReadonlySignal, type Signal, signal } from "@preact/signals-core";
 
 /**
  * See: https://github.com/preactjs/signals/discussions/492
  */
-export const debounceSignal = <T>(targetSignal: Signal<T>, timeoutMs = 0): Signal<T> => {
+export const debounceSignal = <T>(targetSignal: Signal<T>, timeoutMs = 0): ReadonlySignal<T> => {
 	const debounceSignal = signal<T>(targetSignal.value);
 
 	effect(() => {
