@@ -1,3 +1,5 @@
+import { moment } from "obsidian";
+
 export function formatDuration(ms: number): string {
 	let seconds = Math.floor(ms / 1000);
 
@@ -25,4 +27,10 @@ export function formatBytes(bytes: number, decimals = 2): string {
 
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 	return `${parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
+}
+
+export function formatTemplate(template: string, context: { date: Date }) {
+	return template.replace(/\{\{(.+)\}\}/g, (_, key: string) => {
+		return moment(context.date).format(key);
+	});
 }
