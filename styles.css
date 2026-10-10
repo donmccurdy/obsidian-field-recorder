@@ -76,7 +76,7 @@
 }
 
 /******************************************************************************
- * SETTINGS
+ * VIEW SETTINGS
  */
 
 .fieldrec-section .setting-item.is-disabled {
@@ -133,4 +133,18 @@
 	background: var(--interactive-normal);
 	color: var(--text-faint);
 	opacity: 0.5;
+}
+
+/******************************************************************************
+ * SETTINGS
+ */
+
+.fieldrec-setting-group-debug .setting-item-info {
+	display: none;
+}
+
+.fieldrec-setting-group-debug textarea {
+	width: 100%;
+	resize: none;
+	field-sizing: content;
 }

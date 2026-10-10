@@ -1,3 +1,5 @@
+export type PlatformLabel = "Windows" | "MacOS" | "Linux" | "Android" | "iOS" | "Unknown";
+
 export type Mode = "off" | "monitor" | "pause" | "record";
 
 export type MimeType = "audio/mp4" | "audio/webm;codecs=opus" | "audio/webm;codecs=pcm";
