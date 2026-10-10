@@ -60,3 +60,16 @@ export const DEFAULT_SAMPLE_WINDOW: SampleWindow = Object.freeze({
 	sampleLevels: new Float32Array(SAMPLE_BIN_COUNT),
 	sampleClips: new Uint8Array(SAMPLE_BIN_COUNT),
 });
+
+export const KNOWN_AUDIO_CONSTRAINTS = new Set([
+	"sampleRate",
+	"sampleSize",
+	"echoCancellation",
+	"autoGainControl",
+	"noiseSuppression",
+	"latency",
+	"channelCount",
+
+	// not in spec
+	"voiceIsolation",
+]);
