@@ -21,7 +21,7 @@ export class FieldRecorderSettingTab extends PluginSettingTab {
 		super(app, plugin);
 		this.plugin = plugin;
 		this.debugInfo = `
-field-recorder:
+plugin:
 	${plugin.manifest.version}
 obsidian:
 	${apiVersion}
