@@ -212,7 +212,7 @@ export class FieldRecorderView extends ItemView {
 
 		this.waveformView = this.addChild(new WaveformView({ state, canvasEl: this.ui.canvasEl }));
 
-		const btnRowEl = recordSectionEl.createEl("div", { cls: "fieldrec-btn-row" });
+		const btnRowEl = recordSectionEl.createDiv({ cls: "fieldrec-btn-row" });
 
 		const recordBtnEl = btnRowEl.createEl("button", {
 			title: "Record",

@@ -285,7 +285,7 @@ export class FieldRecorderPlugin extends Plugin {
 
 		if (mode === "record") {
 			this.statusBarItemEl = this.addStatusBarItem();
-			const iconEl = this.statusBarItemEl.createEl("span");
+			const iconEl = this.statusBarItemEl.createSpan();
 			iconEl.toggleClass("status-bar-item-icon", true);
 			setIcon(iconEl, "mic");
 		} else if (this.statusBarItemEl) {
