@@ -94,7 +94,7 @@ export const DEFAULT_SETTINGS = {
 
 	outputSettings: {
 		filename: "",
-		mimeType: SUPPORTED_MIME_TYPES.includes("audio/mp4") ? "audio/mp4" : SUPPORTED_MIME_TYPES[0],
+		mimeType: SUPPORTED_MIME_TYPES.includes("audio/mp4") ? "audio/mp4" : SUPPORTED_MIME_TYPES[0]!,
 		bitrate: 192000,
 	} satisfies OutputSettings,
 } satisfies FieldRecorderSettingsValues;

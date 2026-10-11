@@ -1,6 +1,5 @@
 import { computed, type Signal, signal } from "@preact/signals-core";
 import { Platform } from "obsidian";
-import { debounceSignal } from "utils/debounceSignal";
 import { DEFAULT_SAMPLE_WINDOW, RAW_MIME_TYPES } from "./constants";
 import type {
 	FieldRecorderSettings,
@@ -9,6 +8,7 @@ import type {
 	OutputSettings,
 } from "./settings";
 import type { Mode, SampleWindow, Theme } from "./types";
+import { debounceSignal } from "./utils/debounceSignal";
 import { getTheme } from "./utils/theme";
 
 // See: https://github.com/donmccurdy/obsidian-field-recorder/issues/9

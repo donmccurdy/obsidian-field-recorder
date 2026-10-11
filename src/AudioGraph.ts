@@ -8,7 +8,7 @@ import type { InputSettings } from "./settings";
  * chance I'll need to extend this later to support other audio features.
  */
 export class AudioGraph extends Component {
-	private sampleBuffer: Float32Array | null = null;
+	private sampleBuffer: Float32Array<ArrayBuffer> | null = null;
 
 	private constructor(
 		private readonly ctx: AudioContext,

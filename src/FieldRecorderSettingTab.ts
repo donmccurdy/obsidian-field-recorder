@@ -13,6 +13,9 @@ import { DEFAULT_FILENAME_TEMPLATE, DEFAULT_SETTINGS, type PluginSettings } from
 import type { EmbedPosition } from "./types";
 import { getPlatformLabel } from "./utils/platform";
 
+/** [constraint, value] */
+type CV = [string, unknown];
+
 export class FieldRecorderSettingTab extends PluginSettingTab {
 	plugin: FieldRecorderPlugin;
 	debugInfo: string;
@@ -27,12 +30,12 @@ obsidian:
 	${apiVersion}
 platform:
 	${getPlatformLabel()}
-mimeTypes:
+formats:
 	${SUPPORTED_MIME_TYPES.join("\n\t")}
-audioConstraints:
+constraints:
 	${Object.entries(navigator.mediaDevices.getSupportedConstraints())
-		.filter(([constraint, value]) => KNOWN_AUDIO_CONSTRAINTS.has(constraint) && value)
-		.map(([constraint]) => constraint)
+		.filter(([constraint, value]: CV) => KNOWN_AUDIO_CONSTRAINTS.has(constraint) && value)
+		.map(([constraint]: CV) => constraint)
 		.join("\n\t")}
 `.trim();
 	}

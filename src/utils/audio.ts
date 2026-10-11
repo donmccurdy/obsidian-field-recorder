@@ -19,7 +19,7 @@ export function updateSampleWindow(mode: Mode, window: SampleWindow) {
 	// TODO: Could use timer instead, pause waveform when paused. Needs meter.
 	const timeMs = Date.now() - startTimeMs;
 	const binIndex = Math.floor(timeMs / binSizeMs) % binCount;
-	const binTimeMs = window.sampleTimestamps[binIndex];
+	const binTimeMs = window.sampleTimestamps[binIndex]!;
 
 	window.binIndex = binIndex;
 
@@ -33,15 +33,15 @@ export function updateSampleWindow(mode: Mode, window: SampleWindow) {
 		return;
 	}
 
-	const input = window.timeDomainData[0];
+	const input = window.timeDomainData[0]!;
 
-	let level = window.sampleLevels[binIndex];
+	let level = window.sampleLevels[binIndex]!;
 	let clipped = window.sampleClips[binIndex] === 1;
 	let peakInstantPower = 0;
 
 	for (let i = 0; i < input.length; i++) {
-		peakInstantPower = Math.max(input[i] ** 2, peakInstantPower);
-		if (Math.abs(input[i]) > 1) {
+		peakInstantPower = Math.max(input[i]! ** 2, peakInstantPower);
+		if (Math.abs(input[i]!) > 1) {
 			clipped = true;
 		}
 	}

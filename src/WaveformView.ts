@@ -1,5 +1,5 @@
-import type { FieldRecorderState } from "FieldRecorderState";
 import { Component } from "obsidian";
+import type { FieldRecorderState } from "./FieldRecorderState";
 import { getSampleBinIndex } from "./utils/audio";
 
 const PAD = 4;
@@ -49,8 +49,8 @@ export class WaveformView extends Component {
 
 		for (let i = 0; i < binCount; i++) {
 			const index = getSampleBinIndex(i, state.sampleWindow);
-			const volume = sampleLevels[index];
-			const clipped = sampleClips[index];
+			const volume = sampleLevels[index]!;
+			const clipped = sampleClips[index]!;
 
 			if (volume === 0) continue;
 

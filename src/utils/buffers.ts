@@ -1,4 +1,4 @@
-export function concat(chunks: ArrayBuffer[]): Uint8Array {
+export function concat(chunks: ArrayBuffer[]): Uint8Array<ArrayBuffer> {
 	let byteLength = 0;
 	for (const chunk of chunks) {
 		byteLength += chunk.byteLength;
