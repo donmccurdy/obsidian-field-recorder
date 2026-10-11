@@ -4,9 +4,9 @@
 export function frame(fn: () => void): () => void {
 	let handle: number;
 	const animate = () => {
-		handle = requestAnimationFrame(animate);
+		handle = window.requestAnimationFrame(animate);
 		fn();
 	};
-	handle = requestAnimationFrame(animate);
-	return () => cancelAnimationFrame(handle);
+	handle = window.requestAnimationFrame(animate);
+	return () => window.cancelAnimationFrame(handle);
 }

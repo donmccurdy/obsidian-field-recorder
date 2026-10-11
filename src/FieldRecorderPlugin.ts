@@ -7,7 +7,6 @@ import {
 	type Workspace,
 	type WorkspaceLeaf,
 } from "obsidian";
-import { getDefaultFilename } from "utils/filesystem";
 import { LOCAL_STORAGE_KEY, MIME_TYPE_TO_EXTENSION, VIEW_TYPE_FIELD_RECORDER } from "./constants";
 import { FieldRecorderModel } from "./FieldRecorderModel";
 import { FieldRecorderSettingTab } from "./FieldRecorderSettingTab";
@@ -21,6 +20,7 @@ import {
 	type FieldRecorderSettingsValues,
 } from "./settings";
 import type { Mode } from "./types";
+import { getDefaultFilename } from "./utils/filesystem";
 import { frame } from "./utils/signals";
 import { getTheme } from "./utils/theme";
 
@@ -32,8 +32,8 @@ import { getTheme } from "./utils/theme";
  * to changes in Signal state.
  */
 export class FieldRecorderPlugin extends Plugin {
-	state: FieldRecorderState;
-	model: FieldRecorderModel;
+	declare state: FieldRecorderState;
+	declare model: FieldRecorderModel;
 	wakeLock: WakeLockSentinel | null = null;
 	ribbonIconEl: HTMLElement | null = null;
 	statusBarItemEl: HTMLElement | null = null;
@@ -117,7 +117,7 @@ export class FieldRecorderPlugin extends Plugin {
 	private registerEffects() {
 		const model = this.model;
 
-		const onDataAvailable = (bytes: Uint8Array) => this.saveRecording(bytes);
+		const onDataAvailable = (bytes: Uint8Array<ArrayBuffer>) => this.saveRecording(bytes);
 		model.addEventListener("dataavailable", onDataAvailable);
 		this.register(() => model.removeEventListener("dataavailable", onDataAvailable));
 
@@ -235,7 +235,7 @@ export class FieldRecorderPlugin extends Plugin {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_FIELD_RECORDER);
 	}
 
-	async saveRecording(data: Uint8Array) {
+	async saveRecording(data: Uint8Array<ArrayBuffer>) {
 		const { vault, fileManager } = this.app;
 
 		const { filenameTemplate } = this.state.settings.pluginSettings.peek();
@@ -244,7 +244,8 @@ export class FieldRecorderPlugin extends Plugin {
 		const basename = outputSettings.filename || getDefaultFilename(filenameTemplate);
 		const filename = `${basename}.${MIME_TYPE_TO_EXTENSION[outputSettings.mimeType]}`;
 		const path = await fileManager.getAvailablePathForAttachment(filename);
-		const file = await vault.createBinary(path, data);
+		const buffer = data.buffer.slice(data.byteOffset, data.byteLength);
+		const file = await vault.createBinary(path, buffer);
 
 		this.showRecording(file);
 	}

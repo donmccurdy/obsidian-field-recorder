@@ -16,7 +16,7 @@ export class FieldRecorderModel extends Component {
 	private recorder: MediaRecorder | null = null;
 
 	private chunks: Promise<ArrayBuffer>[] = [];
-	private chunkCallbacks: ((bytes: Uint8Array) => Promise<void>)[] = [];
+	private chunkCallbacks: ((bytes: Uint8Array<ArrayBuffer>) => Promise<void>)[] = [];
 	private chunkByteLength = 0;
 
 	constructor(state: FieldRecorderState) {
@@ -196,12 +196,18 @@ export class FieldRecorderModel extends Component {
 		}
 	}
 
-	addEventListener(type: "dataavailable", callback: (chunk: Uint8Array) => Promise<void>) {
+	addEventListener(
+		type: "dataavailable",
+		callback: (chunk: Uint8Array<ArrayBuffer>) => Promise<void>,
+	) {
 		assert(type === "dataavailable", "invalid event type");
 		this.chunkCallbacks.push(callback);
 	}
 
-	removeEventListener(type: "dataavailable", callback: (chunk: Uint8Array) => Promise<void>) {
+	removeEventListener(
+		type: "dataavailable",
+		callback: (chunk: Uint8Array<ArrayBuffer>) => Promise<void>,
+	) {
 		assert(type === "dataavailable", "invalid event type");
 		this.chunkCallbacks = this.chunkCallbacks.filter((fn) => fn !== callback);
 	}

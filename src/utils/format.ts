@@ -31,6 +31,8 @@ export function formatBytes(bytes: number, decimals = 2): string {
 
 export function formatTemplate(template: string, context: { date: Date }) {
 	return template.replace(/\{\{(.+)\}\}/g, (_, key: string) => {
+		// @ts-expect-error Types are wrong.
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Types are wrong.
 		return moment(context.date).format(key);
 	});
 }

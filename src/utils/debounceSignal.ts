@@ -8,11 +8,11 @@ export const debounceSignal = <T>(targetSignal: Signal<T>, timeoutMs = 0): Reado
 
 	effect(() => {
 		const value = targetSignal.value;
-		const timeout = setTimeout(() => {
+		const timeout = window.setTimeout(() => {
 			debounceSignal.value = value;
 		}, timeoutMs);
 		return () => {
-			clearTimeout(timeout);
+			window.clearTimeout(timeout);
 		};
 	});
 
