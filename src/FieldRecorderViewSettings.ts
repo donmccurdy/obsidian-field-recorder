@@ -1,6 +1,7 @@
 import type { Signal } from "@preact/signals-core";
 import { Setting } from "obsidian";
 import { MIME_TYPE_TO_NAME, SUPPORTED_BITRATES, SUPPORTED_MIME_TYPES } from "./constants";
+import { RingDialComponent } from "./RingDialComponent";
 import type { GraphSettings, InputSettings, OutputSettings } from "./settings";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -53,6 +54,7 @@ export const SETTING_CONFIGS: Partial<Record<SettingKey, SettingConfig>> = {
 		name: "Gain",
 		type: "slider",
 		limits: [-5, +5, 0.05],
+		cls: ["-wide"],
 	},
 	noiseSuppression: {
 		// TODO: Has no effect if voice isolation is on, and should be disabled.
@@ -100,16 +102,17 @@ export function createSetting<K extends SettingKey>(
 			break;
 
 		case "slider":
-			setting.addSlider((slider) =>
-				slider
+			setting.addComponent((el) => {
+				return new RingDialComponent(el)
 					.setValue(signal.peek()[id] as number)
-					.setInstant(true)
-					.setLimits(...(config.limits as [number, number, number]))
+					.setMin(config.limits![0])
+					.setMax(config.limits![1])
+					.setStep(config.limits![2])
 					.setDisabled(true)
 					.onChange((value) => {
 						signal.value = { ...signal.peek(), [id]: value };
-					}),
-			);
+					});
+			});
 			break;
 
 		case "dropdown":
