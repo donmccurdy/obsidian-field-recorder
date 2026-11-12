@@ -9,6 +9,12 @@ export class RingDialComponent extends ValueComponent<number> {
 		this.el = parentEl.appendChild(new RingDial());
 	}
 
+	setDisabled(disabled: boolean): this {
+		this.el.disabled = disabled;
+		super.setDisabled(disabled);
+		return this;
+	}
+
 	getValue(): number {
 		return this.el.value;
 	}
