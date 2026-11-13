@@ -48,9 +48,14 @@ export class FieldRecorderView extends ItemView {
 
 		this.inputOptions = computed(() =>
 			Object.fromEntries(
-				this.state.inputDevices.value.map((device) => {
+				this.state.inputDevices.value.map((device, index) => {
 					const label = device.label.replace(/\(.*\)/, "").trim();
-					return [device.deviceId, label];
+					// Labels may be blank before permission is granted, or while a
+					// platform (e.g. Android) is still populating the device list.
+					// Fall back to a readable placeholder rather than a blank option.
+					const fallback =
+						device.deviceId === "default" ? "Default microphone" : `Microphone ${index + 1}`;
+					return [device.deviceId, label || fallback];
 				}),
 			),
 		);

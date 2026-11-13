@@ -71,6 +71,11 @@ export class FieldRecorderModel extends Component {
 		this.graph = this.addChild(await AudioGraph.createGraph(inputSettings));
 		this.state.inputDevices.value = await this.getInputDevices();
 
+		// Derive capabilities from the live track rather than the InputDeviceInfo
+		// returned by enumerateDevices(): on some platforms (observed on
+		// Android) the latter under-reports what the device actually supports.
+		this.state.activeTrackCapabilities.value = this._getActiveTrackCapabilities();
+
 		resetSampleWindow(this.state.sampleWindow);
 
 		this.state.mode.value = "monitor";
@@ -82,8 +87,18 @@ export class FieldRecorderModel extends Component {
 
 		this.removeChild(this.graph!);
 		this.graph = null;
+		this.state.activeTrackCapabilities.value = null;
 
 		mode.value = "off";
+	}
+
+	private _getActiveTrackCapabilities(): MediaTrackCapabilities | null {
+		try {
+			return this.graph?.stream.getAudioTracks()[0]?.getCapabilities() ?? null;
+		} catch (error) {
+			console.error("[fieldrec] Failed to read active track capabilities", error);
+			return null;
+		}
 	}
 
 	startRecording() {

@@ -71,6 +71,17 @@ export type FieldRecorderState = Readonly<{
 	 * Selected audio input device. Device may remain selected if state='off'.
 	 */
 	activeInput: Signal<InputDeviceInfo | null>;
+
+	/**
+	 * Capabilities of the currently active audio track, used to decide which
+	 * input settings can be changed. Derived from the live MediaStreamTrack
+	 * (set by FieldRecorderModel while monitoring/recording) rather than from
+	 * InputDeviceInfo.getCapabilities(), since on some platforms (observed on
+	 * Android) the latter reports far fewer capabilities than the live track
+	 * actually supports — e.g. a "default" alias device may report none of
+	 * deviceId/autoGainControl/noiseSuppression/voiceIsolation at all.
+	 */
+	activeTrackCapabilities: Signal<MediaTrackCapabilities | null>;
 }>;
 
 export function createState(settings: FieldRecorderSettings): FieldRecorderState {
@@ -97,12 +108,14 @@ export function createState(settings: FieldRecorderSettings): FieldRecorderState
 		return null;
 	});
 
+	const activeTrackCapabilities = signal<MediaTrackCapabilities | null>(null);
+
 	const settingsDisabled = {
 		inputSettings: computed(() => {
 			const modeValue = mode.value;
-			const device = activeInput.value;
+			const capabilities = activeTrackCapabilities.value;
 
-			if (modeValue !== "monitor" || !device) {
+			if (modeValue !== "monitor" || !capabilities) {
 				return {
 					autoGainControl: true,
 					noiseSuppression: true,
@@ -110,8 +123,6 @@ export function createState(settings: FieldRecorderSettings): FieldRecorderState
 					deviceId: modeValue === "record",
 				};
 			}
-
-			const capabilities = device.getCapabilities();
 
 			return {
 				deviceId: !("deviceId" in capabilities),
@@ -156,5 +167,6 @@ export function createState(settings: FieldRecorderSettings): FieldRecorderState
 		settingsDisabled,
 		inputDevices,
 		activeInput,
+		activeTrackCapabilities,
 	});
 }
