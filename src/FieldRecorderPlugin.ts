@@ -112,6 +112,15 @@ export class FieldRecorderPlugin extends Plugin {
 				return true;
 			},
 		});
+
+		this.addCommand({
+			id: "reset",
+			name: "Reset to default settings",
+			callback: () => {
+				void this.clearSettings();
+				return true;
+			},
+		});
 	}
 
 	private registerEffects() {
