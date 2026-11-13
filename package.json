@@ -15,6 +15,7 @@
 	"license": "Parity-7.0.0",
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
+		"@donmccurdy/ring-dial": "^0.1.4",
 		"@eslint/js": "^9.39.4",
 		"@preact/signals-core": "^1.14.4",
 		"@types/node": "^22.15.17",

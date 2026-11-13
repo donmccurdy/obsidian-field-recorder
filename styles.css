@@ -89,8 +89,27 @@
 	align-items: flex-start;
 }
 
+.setting-item-control ring-dial {
+	--label-color: var(--text-normal);
+	--tick-color: var(--text-normal);
+	--tick-width: 1px;
+	--major-tick-color: var(--text-normal);
+	--indicator-color: var(--interactive-accent);
+	--track-color: var(--dropdown-background);
+	--track-radius: var(--input-radius);
+}
+
+.setting-item-control ring-dial::part(track) {
+	box-shadow: var(--input-shadow);
+}
+
+.setting-item-control ring-dial::part(tick-label) {
+	font-weight: var(--input-font-weight);
+}
+
 .fieldrec-setting-item.-wide .setting-item-control,
-.fieldrec-setting-item.-wide .setting-item-control > select {
+.fieldrec-setting-item.-wide .setting-item-control > select,
+.fieldrec-setting-item.-wide .setting-item-control > ring-dial {
 	width: 100%;
 }
 
